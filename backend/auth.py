@@ -139,11 +139,15 @@ class AuthManager:
         if User.query.filter_by(email=email).first():
             return None, "Email already registered"
         
+        # Check if this is the first user (make them sysop)
+        is_first_user = User.query.count() == 0
+        
         # Create user
         user = User(
             callsign=callsign,
             email=email,
-            password_hash=AuthManager.hash_password(password)
+            password_hash=AuthManager.hash_password(password),
+            role='sysop' if is_first_user else 'user'
         )
         
         db.session.add(user)

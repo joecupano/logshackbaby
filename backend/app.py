@@ -81,6 +81,22 @@ def require_api_key(f):
     return decorated_function
 
 
+def require_role(role):
+    """Decorator to require a specific role"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not hasattr(request, 'current_user'):
+                return jsonify({'error': 'Authentication required'}), 401
+            
+            if not request.current_user.has_role(role):
+                return jsonify({'error': 'Insufficient permissions'}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
 # Routes - Serve Frontend
 @app.route('/')
 def index():
@@ -147,6 +163,7 @@ def login():
     return jsonify({
         'session_token': session_token,
         'callsign': user.callsign,
+        'role': user.role,
         'mfa_required': user.mfa_enabled
     }), 200
 
@@ -643,6 +660,228 @@ def generate_adif_export(logs, callsign):
         records.append(record)
     
     return header + ''.join(records)
+
+
+# Routes - Admin (Sysop)
+@app.route('/api/admin/users', methods=['GET'])
+@require_auth
+@require_role('sysop')
+def admin_list_users():
+    """List all users (sysop only)"""
+    users = User.query.all()
+    return jsonify({
+        'users': [{
+            'id': u.id,
+            'callsign': u.callsign,
+            'email': u.email,
+            'role': u.role,
+            'is_active': u.is_active,
+            'mfa_enabled': u.mfa_enabled,
+            'created_at': u.created_at.isoformat(),
+            'last_login': u.last_login.isoformat() if u.last_login else None,
+            'log_count': len(u.log_entries)
+        } for u in users]
+    }), 200
+
+
+@app.route('/api/admin/users', methods=['POST'])
+@require_auth
+@require_role('sysop')
+def admin_create_user():
+    """Create a new user (sysop only)"""
+    data = request.get_json()
+    
+    callsign = data.get('callsign', '').strip().upper()
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    role = data.get('role', 'user')
+    
+    if not callsign or not email or not password:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    if role not in ['user', 'logadmin', 'sysop']:
+        return jsonify({'error': 'Invalid role'}), 400
+    
+    # Check if user exists
+    if User.query.filter_by(callsign=callsign).first():
+        return jsonify({'error': 'Callsign already registered'}), 400
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already registered'}), 400
+    
+    # Create user
+    user = User(
+        callsign=callsign,
+        email=email,
+        password_hash=AuthManager.hash_password(password),
+        role=role
+    )
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'User created successfully',
+        'user': {
+            'id': user.id,
+            'callsign': user.callsign,
+            'email': user.email,
+            'role': user.role
+        }
+    }), 201
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['PUT'])
+@require_auth
+@require_role('sysop')
+def admin_update_user(user_id):
+    """Update a user (sysop only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    data = request.get_json()
+    
+    # Update fields
+    if 'email' in data:
+        email = data['email'].strip()
+        if email != user.email and User.query.filter_by(email=email).first():
+            return jsonify({'error': 'Email already in use'}), 400
+        user.email = email
+    
+    if 'role' in data:
+        role = data['role']
+        if role not in ['user', 'logadmin', 'sysop']:
+            return jsonify({'error': 'Invalid role'}), 400
+        user.role = role
+    
+    if 'is_active' in data:
+        user.is_active = bool(data['is_active'])
+    
+    if 'password' in data and data['password']:
+        user.password_hash = AuthManager.hash_password(data['password'])
+    
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'User updated successfully',
+        'user': {
+            'id': user.id,
+            'callsign': user.callsign,
+            'email': user.email,
+            'role': user.role,
+            'is_active': user.is_active
+        }
+    }), 200
+
+
+@app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
+@require_auth
+@require_role('sysop')
+def admin_delete_user(user_id):
+    """Delete a user and all their logs (sysop only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Prevent deleting yourself
+    if user.id == request.current_user.id:
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    
+    callsign = user.callsign
+    log_count = len(user.log_entries)
+    
+    # Delete user's sessions first (to avoid foreign key constraint)
+    Session.query.filter_by(user_id=user_id).delete()
+    
+    # Delete user (cascade will handle log entries, API keys, etc.)
+    db.session.delete(user)
+    db.session.commit()
+    
+    return jsonify({
+        'message': f'User {callsign} and {log_count} log entries deleted successfully'
+    }), 200
+
+
+# Routes - Log Admin
+@app.route('/api/logadmin/users', methods=['GET'])
+@require_auth
+@require_role('logadmin')
+def logadmin_list_users():
+    """List all users with log info (logadmin only)"""
+    users = User.query.all()
+    return jsonify({
+        'users': [{
+            'id': u.id,
+            'callsign': u.callsign,
+            'log_count': len(u.log_entries),
+            'created_at': u.created_at.isoformat()
+        } for u in users]
+    }), 200
+
+
+@app.route('/api/logadmin/users/<int:user_id>/logs', methods=['GET'])
+@require_auth
+@require_role('logadmin')
+def logadmin_get_user_logs(user_id):
+    """Get logs for a specific user (logadmin only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Get logs
+    pagination = LogEntry.query.filter_by(user_id=user_id).order_by(
+        LogEntry.qso_date.desc(), 
+        LogEntry.time_on.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    
+    logs = [{
+        'id': log.id,
+        'qso_date': log.qso_date,
+        'time_on': log.time_on,
+        'call': log.call,
+        'band': log.band,
+        'mode': log.mode,
+        'freq': log.freq,
+        'rst_sent': log.rst_sent,
+        'rst_rcvd': log.rst_rcvd,
+        'station_callsign': log.station_callsign,
+        'comment': log.comment
+    } for log in pagination.items]
+    
+    return jsonify({
+        'user': {
+            'id': user.id,
+            'callsign': user.callsign
+        },
+        'logs': logs,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
+
+
+@app.route('/api/logadmin/users/<int:user_id>/logs', methods=['DELETE'])
+@require_auth
+@require_role('logadmin')
+def logadmin_reset_user_logs(user_id):
+    """Reset (delete all) logs for a specific user (logadmin only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    log_count = len(user.log_entries)
+    
+    # Delete all logs for this user
+    LogEntry.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+    
+    return jsonify({
+        'message': f'Reset complete: {log_count} log entries deleted for {user.callsign}'
+    }), 200
 
 
 # Health check

@@ -17,8 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeApp() {
     // Check for existing session
     sessionToken = localStorage.getItem('sessionToken');
+    const userRole = localStorage.getItem('userRole');
     
-    if (sessionToken) {
+    if (sessionToken && userRole) {
+        // Restore currentUser from localStorage
+        currentUser = { role: userRole };
         // Try to load dashboard
         loadDashboard();
     } else {
@@ -65,6 +68,11 @@ function setupEventListeners() {
     document.getElementById('mfa-enable-form')?.addEventListener('submit', enableMFA);
     document.getElementById('cancel-mfa-setup')?.addEventListener('click', cancelMFASetup);
     document.getElementById('disable-mfa-btn')?.addEventListener('click', disableMFA);
+    
+    // Admin
+    document.getElementById('create-user-btn')?.addEventListener('click', showCreateUserForm);
+    document.getElementById('cancel-create-user')?.addEventListener('click', hideCreateUserForm);
+    document.getElementById('admin-create-user-form')?.addEventListener('submit', handleAdminCreateUser);
 }
 
 // Screen Management
@@ -109,6 +117,12 @@ function switchTab(tabName) {
             break;
         case 'settings':
             loadSettings();
+            break;
+        case 'logadmin':
+            loadLogAdminUsers();
+            break;
+        case 'sysop':
+            loadSysopUsers();
             break;
     }
 }
@@ -174,7 +188,10 @@ async function handleLogin(e) {
         
         if (response.ok) {
             sessionToken = data.session_token;
-            currentUser = { callsign: data.callsign };
+            currentUser = { 
+                callsign: data.callsign,
+                role: data.role || 'user'
+            };
             
             if (data.mfa_required) {
                 // Show MFA verification
@@ -183,6 +200,7 @@ async function handleLogin(e) {
             } else {
                 // Login complete
                 localStorage.setItem('sessionToken', sessionToken);
+                localStorage.setItem('userRole', currentUser.role);
                 loadDashboard();
             }
         } else {
@@ -209,6 +227,7 @@ async function handleMFAVerify(e) {
         
         if (response.ok) {
             localStorage.setItem('sessionToken', sessionToken);
+            localStorage.setItem('userRole', currentUser.role);
             loadDashboard();
         } else {
             showMessage(data.error || 'Invalid code', 'error');
@@ -261,6 +280,7 @@ async function handleLogout() {
     }
     
     localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userRole');
     sessionToken = null;
     currentUser = null;
     showScreen('login');
@@ -270,6 +290,19 @@ async function handleLogout() {
 // Dashboard
 async function loadDashboard() {
     showScreen('dashboard');
+    
+    // Hide admin tabs by default
+    document.getElementById('logadmin-tab-btn').classList.add('hidden');
+    document.getElementById('sysop-tab-btn').classList.add('hidden');
+    
+    // Show admin tabs based on role (exclusive - only show tab for exact role)
+    const userRole = localStorage.getItem('userRole') || 'user';
+    if (userRole === 'logadmin') {
+        document.getElementById('logadmin-tab-btn').classList.remove('hidden');
+    }
+    if (userRole === 'sysop') {
+        document.getElementById('sysop-tab-btn').classList.remove('hidden');
+    }
     
     // Get user info from session
     try {
@@ -732,6 +765,280 @@ function formatDateTime(isoStr) {
     return date.toLocaleString();
 }
 
+// Admin Functions - Log Admin
+async function loadLogAdminUsers() {
+    try {
+        const response = await apiCall('/logadmin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayLogAdminUsers(data.users);
+        }
+    } catch (error) {
+        showMessage('Failed to load users', 'error');
+    }
+}
+
+function displayLogAdminUsers(users) {
+    const container = document.getElementById('logadmin-users-list');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p>No users found</p>';
+        return;
+    }
+    
+    const html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Callsign</th>
+                    <th>Log Count</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(u => `
+                    <tr>
+                        <td><strong>${u.callsign}</strong></td>
+                        <td>${u.log_count}</td>
+                        <td>${formatDateTime(u.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm" onclick="viewUserLogs(${u.id}, '${u.callsign}')">View Logs</button>
+                            <button class="btn btn-sm btn-danger" onclick="resetUserLogs(${u.id}, '${u.callsign}')">Reset Logs</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+async function viewUserLogs(userId, callsign) {
+    try {
+        const response = await apiCall(`/logadmin/users/${userId}/logs?page=1&per_page=100`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            const logs = data.logs;
+            const logHtml = logs.length > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Call</th>
+                            <th>Band</th>
+                            <th>Mode</th>
+                            <th>RST Sent</th>
+                            <th>RST Rcvd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(log => `
+                            <tr>
+                                <td>${formatDate(log.qso_date)}</td>
+                                <td>${formatTime(log.time_on)}</td>
+                                <td><strong>${log.call}</strong></td>
+                                <td>${log.band || '-'}</td>
+                                <td>${log.mode || '-'}</td>
+                                <td>${log.rst_sent || '-'}</td>
+                                <td>${log.rst_rcvd || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <p>Total: ${data.total} logs</p>
+            ` : '<p>No logs found</p>';
+            
+            const container = document.getElementById('logadmin-users-list');
+            container.innerHTML = `
+                <div class="admin-section">
+                    <h3>Logs for ${callsign}</h3>
+                    <button class="btn btn-secondary" onclick="loadLogAdminUsers()">Back to Users</button>
+                    ${logHtml}
+                </div>
+            `;
+        }
+    } catch (error) {
+        showMessage('Failed to load user logs', 'error');
+    }
+}
+
+async function resetUserLogs(userId, callsign) {
+    if (!confirm(`Are you sure you want to reset ALL logs for ${callsign}? This cannot be undone!`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/logadmin/users/${userId}/logs`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(data.message, 'success');
+            loadLogAdminUsers();
+        } else {
+            showMessage(data.error || 'Failed to reset logs', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to reset logs', 'error');
+    }
+}
+
+// Admin Functions - Sysop
+async function loadSysopUsers() {
+    try {
+        const response = await apiCall('/admin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displaySysopUsers(data.users);
+        }
+    } catch (error) {
+        showMessage('Failed to load users', 'error');
+    }
+}
+
+function displaySysopUsers(users) {
+    const container = document.getElementById('sysop-users-list');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p>No users found</p>';
+        return;
+    }
+    
+    const html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Callsign</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>MFA</th>
+                    <th>Logs</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(u => `
+                    <tr>
+                        <td><strong>${u.callsign}</strong></td>
+                        <td>${u.email}</td>
+                        <td><span class="badge badge-${u.role}">${u.role}</span></td>
+                        <td>${u.is_active ? '✓ Active' : '✗ Inactive'}</td>
+                        <td>${u.mfa_enabled ? '✓' : '✗'}</td>
+                        <td>${u.log_count}</td>
+                        <td>${formatDateTime(u.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm" onclick="editUser(${u.id})">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${u.callsign}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function showCreateUserForm() {
+    document.getElementById('create-user-form').classList.remove('hidden');
+}
+
+function hideCreateUserForm() {
+    document.getElementById('create-user-form').classList.add('hidden');
+    document.getElementById('admin-create-user-form').reset();
+}
+
+async function handleAdminCreateUser(e) {
+    e.preventDefault();
+    
+    const callsign = document.getElementById('admin-user-callsign').value.trim().toUpperCase();
+    const email = document.getElementById('admin-user-email').value.trim();
+    const password = document.getElementById('admin-user-password').value;
+    const role = document.getElementById('admin-user-role').value;
+    
+    try {
+        const response = await apiCall('/admin/users', {
+            method: 'POST',
+            body: JSON.stringify({ callsign, email, password, role })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(data.message, 'success');
+            hideCreateUserForm();
+            loadSysopUsers();
+        } else {
+            showMessage(data.error || 'Failed to create user', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to create user', 'error');
+    }
+}
+
+async function editUser(userId) {
+    const newRole = prompt('Enter new role (user/logadmin/sysop):');
+    if (!newRole || !['user', 'logadmin', 'sysop'].includes(newRole)) {
+        if (newRole) showMessage('Invalid role', 'error');
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/admin/users/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ role: newRole })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(data.message, 'success');
+            loadSysopUsers();
+        } else {
+            showMessage(data.error || 'Failed to update user', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to update user', 'error');
+    }
+}
+
+async function deleteUser(userId, callsign) {
+    if (!confirm(`Are you sure you want to delete user ${callsign} and ALL their logs? This cannot be undone!`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/admin/users/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage(data.message, 'success');
+            loadSysopUsers();
+        } else {
+            showMessage(data.error || 'Failed to delete user', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to delete user', 'error');
+    }
+}
+
 // Make functions globally accessible for onclick handlers
 window.loadLogs = loadLogs;
 window.deleteAPIKey = deleteAPIKey;
+window.viewUserLogs = viewUserLogs;
+window.resetUserLogs = resetUserLogs;
+window.editUser = editUser;
+window.deleteUser = deleteUser;

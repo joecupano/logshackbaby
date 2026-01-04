@@ -110,6 +110,8 @@
                         <button class="tab" data-tab="upload">Upload</button>
                         <button class="tab" data-tab="api-keys">API Keys</button>
                         <button class="tab" data-tab="settings">Settings</button>
+                        <button class="tab hidden" id="logadmin-tab-btn" data-tab="logadmin">Log Admin</button>
+                        <button class="tab hidden" id="sysop-tab-btn" data-tab="sysop">System Admin</button>
                     </div>
 
                     <!-- Logs Tab -->
@@ -289,6 +291,54 @@
                                 <p class="success">✓ Two-factor authentication is enabled</p>
                                 <button id="disable-mfa-btn" class="btn btn-danger">Disable 2FA</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Log Admin Tab -->
+                    <div id="logadmin-tab" class="tab-content">
+                        <h2>Log Administration</h2>
+                        <p>View and manage user logs</p>
+
+                        <div id="logadmin-users-list"></div>
+                    </div>
+
+                    <!-- System Admin Tab -->
+                    <div id="sysop-tab" class="tab-content">
+                        <h2>System Administration</h2>
+                        
+                        <div class="admin-section">
+                            <h3>User Management</h3>
+                            <button id="create-user-btn" class="btn btn-primary">Create New User</button>
+                            
+                            <div id="create-user-form" class="form-section hidden">
+                                <h4>Create New User</h4>
+                                <form id="admin-create-user-form">
+                                    <div class="form-group">
+                                        <label>Callsign</label>
+                                        <input type="text" id="admin-user-callsign" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Email</label>
+                                        <input type="email" id="admin-user-email" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Password</label>
+                                        <input type="password" id="admin-user-password" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Role</label>
+                                        <select id="admin-user-role">
+                                            <option value="user">User</option>
+                                            <option value="logadmin">Log Admin</option>
+                                            <option value="sysop">System Operator</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Create User</button>
+                                    <button type="button" id="cancel-create-user" class="btn btn-secondary">Cancel</button>
+                                </form>
+                            </div>
+
+                            <div id="sysop-users-list"></div>
                         </div>
                     </div>
                 </div>
