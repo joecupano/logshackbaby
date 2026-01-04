@@ -289,3 +289,128 @@ def upload_with_error_handling(api_key, file_path):
 success = upload_with_error_handling("your_api_key", "log.adi")
 sys.exit(0 if success else 1)
 ```
+## Administrative API Examples
+
+### Sysop Operations (System Administrator)
+
+#### List All Users
+```bash
+curl -X GET "http://localhost/api/admin/users" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN"
+```
+
+#### Create New User
+```bash
+curl -X POST "http://localhost/api/admin/users" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "callsign": "W2XYZ",
+    "email": "w2xyz@example.com",
+    "password": "secure_password",
+    "role": "user"
+  }'
+```
+
+#### Update User Role
+```bash
+curl -X PUT "http://localhost/api/admin/users/5" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "logadmin"
+  }'
+```
+
+#### Delete User (and all their logs)
+```bash
+curl -X DELETE "http://localhost/api/admin/users/5" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN"
+```
+
+### Log Admin Operations
+
+#### List All Users with Log Counts
+```bash
+curl -X GET "http://localhost/api/logadmin/users" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN"
+```
+
+#### View User's Logs
+```bash
+curl -X GET "http://localhost/api/logadmin/users/5/logs?page=1&per_page=50" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN"
+```
+
+#### Reset User's Logs (delete all)
+```bash
+curl -X DELETE "http://localhost/api/logadmin/users/5/logs" \
+  -H "X-Session-Token: YOUR_SESSION_TOKEN"
+```
+
+### Python Admin Examples
+
+#### Create Multiple Users
+```python
+import requests
+
+def create_user(session_token, callsign, email, password, role='user'):
+    """Create a new user (sysop only)"""
+    url = "http://localhost/api/admin/users"
+    headers = {
+        "X-Session-Token": session_token,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "callsign": callsign,
+        "email": email,
+        "password": password,
+        "role": role
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code == 201:
+        print(f"✅ User {callsign} created successfully")
+        return response.json()
+    else:
+        print(f"❌ Failed to create user: {response.json().get('error')}")
+        return None
+
+# Usage
+session_token = "your_sysop_session_token"
+create_user(session_token, "W3ABC", "w3abc@example.com", "password123", "user")
+create_user(session_token, "K4XYZ", "k4xyz@example.com", "password456", "logadmin")
+```
+
+#### Reset User Logs
+```python
+import requests
+
+def reset_user_logs(session_token, user_id):
+    """Reset all logs for a user (logadmin only)"""
+    url = f"http://localhost/api/logadmin/users/{user_id}/logs"
+    headers = {"X-Session-Token": session_token}
+    
+    response = requests.delete(url, headers=headers)
+    
+    if response.status_code == 200:
+        data = response.json()
+        print(f"✅ {data['message']}")
+    else:
+        print(f"❌ Failed: {response.json().get('error')}")
+
+# Usage
+session_token = "your_logadmin_session_token"
+reset_user_logs(session_token, 5)
+```
+
+## User Roles Reference
+
+| Role | Permissions |
+|------|-------------|
+| **user** | Manage own logs, API keys, and settings |
+| **logadmin** | View all user logs, reset user logs |
+| **sysop** | Full system administration: create/modify/delete users, assign roles |
+
+**Note**: The first user registered automatically becomes a sysop.

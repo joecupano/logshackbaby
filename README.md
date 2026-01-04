@@ -16,9 +16,11 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Security
 - 🔐 **User Registration & Authentication** - Secure account management
+- 🔐 **Role-Based Access Control** - Three user roles: user, logadmin, sysop
 - 🔐 **Multi-Factor Authentication (MFA)** - TOTP support for Google Authenticator, Authy, and Microsoft Authenticator
 - 🔐 **API Keys** - Secure programmatic access for log uploads
 - 🔐 **Password Hashing** - bcrypt-based secure password storage
+- 🔐 **Session Management** - Database-backed sessions for multi-worker support
 
 ### Architecture
 - 🐳 **Containerized** - Docker-based deployment
@@ -74,9 +76,15 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
    - Enter your callsign (e.g., W1ABC)
    - Provide your email and password
    - Click "Register"
+   - **Note**: The first registered user automatically becomes a **sysop** (system administrator)
 
-2. **Enable Two-Factor Authentication** (Recommended)
-   - Login to your account
+2. **User Roles**
+   - **user** (default) - Can manage their own logs
+   - **logadmin** - Can view and reset logs for all users
+   - **sysop** - Full administrative access to create, modify, and delete users
+
+3. **Enable Two-Factor Authentication** (Recommended)
+4  - Login to your account
    - Go to Settings tab
    - Click "Enable 2FA"
    - Scan QR code with your authenticator app
@@ -88,7 +96,7 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
    - Add a description (e.g., "N1MM Logger")
    - **Save the key immediately** - it won't be shown again!
 
-4. **Upload Your First Log**
+5. **Upload Your First Log**
    - Go to "Upload" tab
    - Choose your ADIF file (.adi or .adif)
    - Click "Upload ADIF File"

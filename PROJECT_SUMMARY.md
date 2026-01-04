@@ -95,9 +95,34 @@ Then open your browser to: http://localhost
 1. **bcrypt Password Hashing** - Secure password storage
 2. **TOTP Multi-Factor Authentication** - Time-based one-time passwords
 3. **API Key Authentication** - Secure programmatic access
-4. **Session Management** - Secure session tokens
-5. **Database Isolation** - PostgreSQL only accessible via internal Docker network
-6. **SSL Support** - HTTPS via NGINX reverse proxy
+4. **Session Management** - Database-backed secure session tokens
+5. **Role-Based Access Control** - Three user roles with distinct permissions
+6. **Database Isolation** - PostgreSQL only accessible via internal Docker network
+7. **SSL Support** - HTTPS via NGINX reverse proxy
+
+## 👥 User Roles
+
+### user (Default)
+- Upload and manage personal ADIF logs
+- Create and manage API keys
+- Enable/disable MFA
+- Export personal logs
+- View personal statistics
+
+### logadmin (Log Administrator)
+- All user permissions
+- View all users' logs
+- Reset (delete all) logs for any user
+- Access via "Log Admin" tab
+
+### sysop (System Operator)
+- All permissions
+- Create new users with any role
+- Modify user details (email, role, active status)
+- Delete users and all their data
+- Assign roles to users
+- Access via "System Admin" tab
+- **Note**: First registered user automatically becomes sysop
 
 ## 🗄️ Database Schema
 
@@ -126,7 +151,7 @@ Then open your browser to: http://localhost
 
 ### Authentication
 - `POST /api/register` - Create account
-- `POST /api/login` - User login
+- `POST /api/login` - User login (returns role)
 - `POST /api/logout` - User logout
 - `POST /api/mfa/setup` - Initialize MFA
 - `POST /api/mfa/enable` - Enable MFA
@@ -144,6 +169,17 @@ Then open your browser to: http://localhost
 - `GET /api/logs/stats` - Get statistics
 - `GET /api/logs/export` - Export logs in ADIF format
 - `GET /api/uploads` - Get upload history
+
+### Admin - Sysop Only
+- `GET /api/admin/users` - List all users with full details
+- `POST /api/admin/users` - Create new user with specified role
+- `PUT /api/admin/users/:id` - Update user (email, role, password, active status)
+- `DELETE /api/admin/users/:id` - Delete user and all their logs
+
+### Admin - Log Admin & Sysop
+- `GET /api/logadmin/users` - List all users with log counts
+- `GET /api/logadmin/users/:id/logs` - View specific user's logs
+- `DELETE /api/logadmin/users/:id/logs` - Reset (delete all) user's logs
 
 ## 🔧 Configuration
 

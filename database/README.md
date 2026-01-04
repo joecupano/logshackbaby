@@ -8,7 +8,11 @@ The database schema is automatically created by the Flask application on first s
 
 ## Tables
 
-- **users** - User accounts with MFA support
+- **users** - User accounts with MFA support and role-based access control
+  - Columns: id, callsign, email, password_hash, mfa_secret, mfa_enabled, role, created_at, last_login, is_active
+  - Roles: user (default), logadmin, sysop
+- **sessions** - Database-backed user sessions for multi-worker support
+  - Columns: id, session_token, user_id, mfa_required, mfa_verified, created_at, last_activity
 - **api_keys** - API keys for programmatic log uploads
 - **log_entries** - Individual QSO records from ADIF files
 - **upload_logs** - History of file uploads
