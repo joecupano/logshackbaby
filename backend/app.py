@@ -868,17 +868,25 @@ def contestadmin_get_user_logs(user_id):
 @require_auth
 @require_role('contestadmin')
 def contestadmin_available_fields():
-    """Get all available fields including those in additional_fields JSON"""
-    # Get all unique keys from additional_fields JSON across all logs
+    """Get all ADIF 3.1.6 fields and indicate which have data"""
+    from adif_parser import ADIFParser
+    
+    # Get all possible ADIF fields from parser (excluding core fields)
+    parser = ADIFParser()
+    all_possible_fields = sorted(list(parser.ALL_ADIF_FIELDS - parser.CORE_FIELDS))
+    
+    # Get fields that actually have data in logs
     logs = LogEntry.query.limit(1000).all()
-    json_fields = set()
+    fields_with_data = set()
     
     for log in logs:
         if log.additional_fields:
-            json_fields.update(log.additional_fields.keys())
+            fields_with_data.update(log.additional_fields.keys())
     
     return jsonify({
-        'additional_fields': sorted(list(json_fields))
+        'all_fields': all_possible_fields,
+        'fields_with_data': sorted(list(fields_with_data)),
+        'additional_fields': sorted(list(fields_with_data))  # Keep for backwards compatibility
     }), 200
 
 

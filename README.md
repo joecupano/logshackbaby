@@ -8,12 +8,14 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Core Functionality
 - ✅ **ADIF 3.1.6 Support** - Full compliance with ADIF 3.1.6 specification
+- ✅ **Complete ADIF Field Processing** - Captures ALL ADIF fields from uploaded logs
 - ✅ **ADIF Log Upload** - Parse and store amateur radio logs in ADIF format
 - ✅ **ADIF Log Export** - Download logs in standard ADIF format
 - ✅ **Automatic Deduplication** - Prevent duplicate QSO entries
 - ✅ **Web Interface** - Clean, responsive UI for log management
 - ✅ **Search & Filter** - Find logs by callsign, band, mode, and date
 - ✅ **Statistics Dashboard** - View QSO counts, bands, modes, and more
+- ✅ **Additional Fields Display** - View all extra ADIF fields captured in logs
 
 ### Security
 - 🔐 **User Registration & Authentication** - Secure account management
@@ -114,7 +116,9 @@ For **contestadmin** users, a powerful report generator is available:
 
 2. **Select Fields**
    - Choose from standard ADIF fields (QSO Date, Time, Call, Band, Mode, etc.)
-   - Additional fields from ADIF JSON data are automatically discovered and listed
+   - **All 100+ ADIF 3.1.6 fields** are displayed as selection options
+   - Fields marked with ● contain actual data in uploaded logs
+   - Fields without marker are available for future logs
 
 3. **Apply Filters** (Optional)
    - Date range (from/to)
@@ -127,7 +131,8 @@ For **contestadmin** users, a powerful report generator is available:
 
 5. **Features**
    - Read-only access to all user logs
-   - Custom field selection including JSON-stored ADIF fields
+   - Complete ADIF 3.1.6 field selection (100+ fields available)
+   - Visual indicators show which fields contain data
    - CSV export for external analysis
    - Up to 10,000 records per report
 
@@ -251,14 +256,14 @@ print(response.json())
 
 ## ADIF Format Support
 
-LogShackBaby supports standard ADIF 3.x format files. Core fields extracted include:
+LogShackBaby fully supports ADIF 3.1.6 format files and processes **all ADIF fields**.
 
-### Required Fields
-- `QSO_DATE` - Date of QSO (YYYYMMDD)
-- `TIME_ON` - Start time (HHMMSS)
-- `CALL` - Contacted station's callsign
+### How ADIF Fields Are Processed
 
-### Supported Optional Fields
+**Core Fields** (stored in dedicated database columns for fast searching/filtering):
+- `QSO_DATE` - Date of QSO (YYYYMMDD) **[Required]**
+- `TIME_ON` - Start time (HHMMSS) **[Required]**
+- `CALL` - Contacted station's callsign **[Required]**
 - `BAND` - Band (e.g., 20m, 2m)
 - `MODE` - Mode (e.g., SSB, CW, FT8)
 - `FREQ` - Frequency in MHz
@@ -269,8 +274,42 @@ LogShackBaby supports standard ADIF 3.x format files. Core fields extracted incl
 - `NAME` - Operator name
 - `QTH` - Location
 - `COMMENT` - QSO notes
+- `QSO_DATE_OFF` / `TIME_OFF` - End date/time
 
-All additional ADIF fields are stored as JSON for future use.
+**All Other ADIF Fields** (automatically stored in `additional_fields` JSON column):
+
+The parser captures ALL fields from the ADIF 3.1.6 specification, including:
+- Station details: `OPERATOR`, `OWNER_CALLSIGN`, `MY_CITY`, `MY_COUNTRY`, etc.
+- Contest fields: `CONTEST_ID`, `SRX`, `STX`, `PRECEDENCE`, `CLASS`, etc.
+- QSL tracking: `QSL_SENT`, `QSL_RCVD`, `LOTW_QSL_SENT`, `EQSL_QSL_RCVD`, etc.
+- Power/Propagation: `TX_PWR`, `PROP_MODE`, `SAT_NAME`, `ANT_AZ`, etc.
+- Award tracking: `AWARD_SUBMITTED`, `AWARD_GRANTED`, `CREDIT_SUBMITTED`, etc.
+- Digital modes: `SUBMODE`, application-specific fields (N1MM, LOTW, eQSL, etc.)
+- Location data: `LAT`, `LON`, `CNTY`, `STATE`, `COUNTRY`, `DXCC`, etc.
+- And 100+ more fields...
+
+### Viewing Additional Fields
+
+In the web interface, the "Logs" tab shows a column called "Additional" which displays:
+- A badge showing the count of additional ADIF fields captured for each QSO
+- Hover over the badge to see a tooltip with all additional field names and values
+- This makes it easy to see which QSOs have extra metadata
+
+### Example ADIF File
+
+```adif
+<ADIF_VER:5>3.1.6
+<PROGRAMID:12>LogShackBaby
+<EOH>
+
+<CALL:5>W1ABC <QSO_DATE:8>20240101 <TIME_ON:6>143000 
+<BAND:3>20m <MODE:3>SSB <FREQ:8>14.250000 
+<RST_SENT:2>59 <RST_RCVD:2>59 
+<TX_PWR:3>100 <OPERATOR:5>K1XYZ <CONTEST_ID:7>CQ-WPX
+<EOR>
+```
+
+All fields are captured and stored, preserving the complete QSO record.
 
 ## Deployment
 

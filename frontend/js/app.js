@@ -118,16 +118,23 @@ async function loadAdditionalFields() {
         console.log('Additional fields response:', data);
         
         if (response.ok) {
-            if (data.additional_fields && data.additional_fields.length > 0) {
-                const html = data.additional_fields.map(field => {
+            const allFields = data.all_fields || [];
+            const fieldsWithData = new Set(data.fields_with_data || []);
+            
+            if (allFields.length > 0) {
+                const html = allFields.map(field => {
                     const label = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    return `<label><input type="checkbox" name="report-field" value="json:${field}"> ${label}</label>`;
+                    const hasData = fieldsWithData.has(field);
+                    const dataIndicator = hasData ? ' <span class="has-data-indicator" title="This field has data in logs">●</span>' : '';
+                    const labelClass = hasData ? 'field-with-data' : 'field-no-data';
+                    return `<label class="${labelClass}"><input type="checkbox" name="report-field" value="json:${field}"> ${label}${dataIndicator}</label>`;
                 }).join('');
                 
-                grid.innerHTML = html;
+                const infoText = `<p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">Showing all ${allFields.length} ADIF 3.1.6 fields. Fields with <span class="has-data-indicator">●</span> contain data in uploaded logs.</p>`;
+                grid.innerHTML = infoText + html;
                 container.classList.remove('hidden');
             } else {
-                grid.innerHTML = '<p style="font-style: italic; color: #666;">No additional ADIF fields found in current logs</p>';
+                grid.innerHTML = '<p style="font-style: italic; color: #666;">No additional ADIF fields available</p>';
                 container.classList.remove('hidden');
             }
         } else {
@@ -424,11 +431,27 @@ function displayLogs(logs) {
     const tbody = document.getElementById('logs-tbody');
     
     if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No logs found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">No logs found</td></tr>';
         return;
     }
     
-    tbody.innerHTML = logs.map(log => `
+    tbody.innerHTML = logs.map(log => {
+        // Format additional fields for display
+        let additionalFieldsHtml = '-';
+        if (log.additional_fields && Object.keys(log.additional_fields).length > 0) {
+            const fields = Object.entries(log.additional_fields)
+                .map(([key, value]) => {
+                    // Format field name nicely
+                    const fieldName = key.toUpperCase().replace(/_/g, ' ');
+                    return `${fieldName}: ${value}`;
+                })
+                .join('\n');
+            
+            const count = Object.keys(log.additional_fields).length;
+            additionalFieldsHtml = `<span class="additional-fields-badge" title="${escapeHtml(fields)}">${count} field${count > 1 ? 's' : ''}</span>`;
+        }
+        
+        return `
         <tr>
             <td>${formatDate(log.qso_date)}</td>
             <td>${formatTime(log.time_on)}</td>
@@ -438,8 +461,21 @@ function displayLogs(logs) {
             <td>${log.rst_sent || '-'}</td>
             <td>${log.rst_rcvd || '-'}</td>
             <td>${log.gridsquare || '-'}</td>
+            <td>${additionalFieldsHtml}</td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 function displayPagination(currentPage, totalPages) {

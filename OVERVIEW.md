@@ -23,6 +23,7 @@
 
 ### ✅ Core Requirements
 - ✅ Web-based log server for ADIF formatted logs
+- ✅ **Complete ADIF 3.1.6 field processing** - Captures ALL fields (100+)
 - ✅ User registration system
 - ✅ Multi-factor authentication (TOTP - compatible with Google Authenticator, Authy, Microsoft Authenticator)
 - ✅ API keys for uploading logs
@@ -50,9 +51,9 @@
 
 ### Backend (7 files)
 1. **app.py** (500 lines) - Main Flask application with all API endpoints
-2. **models.py** (130 lines) - SQLAlchemy database models
+2. **models.py** (130 lines) - SQLAlchemy database models with JSON storage for additional fields
 3. **auth.py** (150 lines) - Authentication, MFA, and API key management
-4. **adif_parser.py** (120 lines) - ADIF file parser with deduplication
+4. **adif_parser.py** (250 lines) - Comprehensive ADIF 3.1.6 parser processing 100+ fields
 5. **requirements.txt** - Python dependencies
 6. **Dockerfile** - Backend container definition
 7. **.env.example** - Environment variables template

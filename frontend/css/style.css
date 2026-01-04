@@ -630,6 +630,25 @@ tbody tr:hover {
     text-transform: uppercase;
 }
 
+.additional-fields-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #dbeafe;
+    color: #1e40af;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: help;
+    transition: all 0.2s;
+    white-space: pre-wrap;
+}
+
+.additional-fields-badge:hover {
+    background: #bfdbfe;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .badge-user {
     background: #e3f2fd;
     color: #1976d2;
@@ -676,6 +695,26 @@ table td {
 table tbody tr:hover {
     background: #f5f5f5;
 }
+
+/* Field data indicators */
+.has-data-indicator {
+    color: #10b981;
+    font-size: 0.8em;
+    margin-left: 4px;
+}
+
+.field-with-data {
+    font-weight: 500;
+}
+
+.field-no-data {
+    opacity: 0.6;
+}
+
+.field-no-data:hover {
+    opacity: 1;
+}
+
 /* Subtab Content */
 .subtab-content {
     display: none;

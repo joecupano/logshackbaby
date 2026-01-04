@@ -54,6 +54,12 @@ Welcome to the LogShackBaby documentation! This index will help you find what yo
   - Quick reference
   - Next steps
 
+- **[ADIF_FIELDS_UPDATE.md](ADIF_FIELDS_UPDATE.md)** - ADIF field processing details
+  - Comprehensive ADIF 3.1.6 support
+  - Field storage strategy
+  - Additional fields display
+  - Testing procedures
+
 ## 📂 Component Documentation
 
 ### Backend

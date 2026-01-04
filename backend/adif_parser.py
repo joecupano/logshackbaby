@@ -14,12 +14,68 @@ class ADIFParser:
     # ADIF version supported
     ADIF_VERSION = "3.1.6"
     
-    # Core fields we extract to dedicated columns
+    # Core fields we extract to dedicated columns (limited set for indexing)
     CORE_FIELDS = {
         'qso_date', 'time_on', 'call', 'band', 'mode', 'freq',
         'rst_sent', 'rst_rcvd', 'qso_date_off', 'time_off',
         'station_callsign', 'my_gridsquare', 'gridsquare',
         'name', 'qth', 'comment'
+    }
+    
+    # Comprehensive list of all ADIF 3.1.6 fields
+    # All fields not in CORE_FIELDS will be stored in additional_fields JSON
+    ALL_ADIF_FIELDS = {
+        # QSO details
+        'qso_date', 'time_on', 'qso_date_off', 'time_off', 'call', 'band', 'band_rx',
+        'freq', 'freq_rx', 'mode', 'submode', 'rst_sent', 'rst_rcvd',
+        
+        # Station information
+        'station_callsign', 'operator', 'owner_callsign', 'my_name', 'my_city',
+        'my_cnty', 'my_country', 'my_cq_zone', 'my_dxcc', 'my_fists', 'my_gridsquare',
+        'my_iota', 'my_iota_island_id', 'my_itu_zone', 'my_lat', 'my_lon', 'my_postal_code',
+        'my_rig', 'my_sig', 'my_sig_info', 'my_sota_ref', 'my_state', 'my_street',
+        'my_usaca_counties', 'my_vucc_grids', 'my_antenna', 'my_antenna_intl',
+        'my_arrl_sect', 'my_wwff_ref', 'my_pota_ref',
+        
+        # Contacted station information
+        'name', 'qth', 'gridsquare', 'lat', 'lon', 'country', 'cnty', 'cont', 'cqz',
+        'dxcc', 'email', 'eq_call', 'fists', 'fists_cc', 'iota', 'iota_island_id',
+        'ituz', 'pfx', 'qslmsg', 'region', 'rig', 'rig_intl', 'rx_pwr', 'sig',
+        'sig_info', 'silent_key', 'skcc', 'sota_ref', 'state', 'ten_ten', 'uksmg',
+        'usaca_counties', 've_prov', 'vucc_grids', 'web', 'age', 'address',
+        'address_intl', 'arrl_sect', 'wwff_ref', 'pota_ref', 'hamlogeu_qso_upload_date',
+        'hamqth_qso_upload_date', 'hrdlog_qso_upload_date', 'qrzcom_qso_upload_date',
+        
+        # Award tracking
+        'award_submitted', 'award_granted', 'credit_submitted', 'credit_granted',
+        
+        # Power and propagation
+        'tx_pwr', 'rx_pwr', 'prop_mode', 'sat_mode', 'sat_name', 'ant_az', 'ant_el',
+        'ant_path', 'a_index', 'k_index', 'sfi', 'max_bursts', 'ms_shower',
+        'nr_bursts', 'nr_pings', 'force_init', 'public_key',
+        
+        # Contest information
+        'contest_id', 'srx', 'srx_string', 'stx', 'stx_string', 'precedence',
+        'check', 'class', 'arrl_sect', 'cnty',
+        
+        # QSL information
+        'qsl_sent', 'qsl_sent_via', 'qsl_rcvd', 'qsl_rcvd_via', 'qslrdate',
+        'qslsdate', 'lotw_qsl_sent', 'lotw_qsl_rcvd', 'lotw_qslsdate', 'lotw_qslrdate',
+        'eqsl_qsl_sent', 'eqsl_qsl_rcvd', 'eqsl_qslsdate', 'eqsl_qslrdate',
+        'clublog_qso_upload_date', 'clublog_qso_upload_status',
+        
+        # Digital modes
+        'app_defined', 'darc_dok', 'distance', 'notes', 'qso_complete', 'qso_random',
+        'swl', 'ten_ten', 'uksmg',
+        
+        # Other
+        'comment', 'intl_comment', 'guest_op', 'qth_intl', 'name_intl',
+        'rig_intl', 'address_intl', 'my_antenna_intl', 'notes_intl',
+        'app_n1mm_contacttype', 'app_n1mm_radio', 'app_n1mm_run1run2',
+        'app_n1mm_radiointerfaced', 'app_n1mm_isoriginal', 'app_n1mm_netbiosname',
+        'app_n1mm_isrunqso', 'app_eqsl_ag', 'app_lotw_2xqsl', 'app_lotw_credit_granted',
+        'app_lotw_npsunit', 'app_lotw_owncall', 'app_lotw_qslmode', 'app_lotw_rxqsl',
+        'app_lotw_rxqso'
     }
     
     # ADIF 3.1.6 enumeration fields for validation
@@ -115,21 +171,25 @@ class ADIFParser:
             length = int(length)
             value = value[:length].strip()
             
+            # Skip empty values
             if not value:
                 continue
             
             # Normalize certain fields
-            if field_name == 'band':
+            if field_name == 'band' or field_name == 'band_rx':
                 value = self.normalize_band(value)
-            elif field_name == 'mode':
+            elif field_name == 'mode' or field_name == 'submode':
                 value = self.normalize_mode(value)
             
             # Store in appropriate location
             if field_name in self.CORE_FIELDS:
                 record[field_name] = value
             else:
+                # All other fields go to additional_fields
+                # This captures ALL ADIF fields not in core set
                 additional_fields[field_name] = value
         
+        # Always include additional_fields even if empty for consistency
         if additional_fields:
             record['additional_fields'] = additional_fields
         

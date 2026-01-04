@@ -94,7 +94,18 @@ curl -X POST http://localhost/api/logs/upload \
 
 Expected: Upload successful with counts of new/duplicate records
 
-### 8. View Statistics
+### 8. Test ADIF Field Processing
+
+Test that all ADIF fields are captured:
+
+```bash
+# Run automated ADIF field test
+python3 test_adif_fields.py
+```
+
+Expected: All tests pass, showing additional fields captured
+
+### 9. View Statistics
 
 ```bash
 curl -X GET http://localhost/api/logs/stats \
