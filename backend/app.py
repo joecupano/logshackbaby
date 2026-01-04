@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from datetime import datetime
 
-from models import db, User, APIKey, LogEntry, UploadLog
+from models import db, User, APIKey, LogEntry, UploadLog, Session
 from auth import AuthManager
 from adif_parser import ADIFParser
 
@@ -32,9 +32,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize database
 db.init_app(app)
 
-# Session storage (in production, use Redis or database-backed sessions)
-sessions = {}
-
 
 def require_auth(f):
     """Decorator to require session authentication"""
@@ -42,15 +39,23 @@ def require_auth(f):
     def decorated_function(*args, **kwargs):
         session_token = request.headers.get('X-Session-Token')
         
-        if not session_token or session_token not in sessions:
+        if not session_token:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Look up session in database
+        session = Session.query.filter_by(session_token=session_token).first()
+        if not session:
             return jsonify({'error': 'Authentication required'}), 401
         
         # Check if MFA is required but not completed
-        session = sessions[session_token]
-        if session.get('mfa_required') and not session.get('mfa_verified'):
+        if session.mfa_required and not session.mfa_verified:
             return jsonify({'error': 'MFA verification required'}), 403
         
-        request.current_user = User.query.get(session['user_id'])
+        # Update last activity
+        session.last_activity = datetime.utcnow()
+        db.session.commit()
+        
+        request.current_user = User.query.get(session.user_id)
         if not request.current_user:
             return jsonify({'error': 'User not found'}), 401
         
@@ -126,16 +131,18 @@ def login():
     if not user:
         return jsonify({'error': 'Invalid credentials'}), 401
     
-    # Create session
+    # Create session in database
     import secrets
     session_token = secrets.token_urlsafe(32)
     
-    sessions[session_token] = {
-        'user_id': user.id,
-        'mfa_required': user.mfa_enabled,
-        'mfa_verified': not user.mfa_enabled,
-        'created_at': datetime.utcnow()
-    }
+    new_session = Session(
+        session_token=session_token,
+        user_id=user.id,
+        mfa_required=user.mfa_enabled,
+        mfa_verified=not user.mfa_enabled
+    )
+    db.session.add(new_session)
+    db.session.commit()
     
     return jsonify({
         'session_token': session_token,
@@ -149,8 +156,11 @@ def login():
 def logout():
     """Logout user"""
     session_token = request.headers.get('X-Session-Token')
-    if session_token in sessions:
-        del sessions[session_token]
+    if session_token:
+        session = Session.query.filter_by(session_token=session_token).first()
+        if session:
+            db.session.delete(session)
+            db.session.commit()
     
     return jsonify({'message': 'Logged out successfully'}), 200
 
@@ -209,11 +219,12 @@ def mfa_verify():
     session_token = data.get('session_token', '')
     token = data.get('token', '')
     
-    if session_token not in sessions:
+    # Look up session in database
+    session = Session.query.filter_by(session_token=session_token).first()
+    if not session:
         return jsonify({'error': 'Invalid session'}), 401
     
-    session = sessions[session_token]
-    user = User.query.get(session['user_id'])
+    user = User.query.get(session.user_id)
     
     if not user or not user.mfa_enabled:
         return jsonify({'error': 'MFA not enabled'}), 400
@@ -222,7 +233,7 @@ def mfa_verify():
         return jsonify({'error': 'Invalid token'}), 400
     
     # Mark MFA as verified in session
-    session['mfa_verified'] = True
+    session.mfa_verified = True
     user.last_login = datetime.utcnow()
     db.session.commit()
     

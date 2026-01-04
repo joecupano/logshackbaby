@@ -143,7 +143,8 @@ async function apiCall(endpoint, options = {}) {
         headers
     });
     
-    if (!response.ok && response.status === 401) {
+    // Only treat 401 as session expired if we sent a session token
+    if (!response.ok && response.status === 401 && !options.skipAuth && sessionToken) {
         // Session expired
         localStorage.removeItem('sessionToken');
         sessionToken = null;
@@ -247,7 +248,8 @@ async function handleRegister(e) {
             showMessage(data.error || 'Registration failed', 'error');
         }
     } catch (error) {
-        showMessage('Registration failed. Please try again.', 'error');
+        console.error('Registration error:', error);
+        showMessage(`Registration failed: ${error.message}`, 'error');
     }
 }
 

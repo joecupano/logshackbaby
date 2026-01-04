@@ -87,6 +87,21 @@ class LogEntry(db.Model):
         return f'<LogEntry {self.station_callsign or "?"} -> {self.call} on {self.qso_date}>'
 
 
+class Session(db.Model):
+    __tablename__ = 'sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_token = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    mfa_required = db.Column(db.Boolean, default=False)
+    mfa_verified = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Session {self.session_token[:8]}... for user {self.user_id}>'
+
+
 class UploadLog(db.Model):
     __tablename__ = 'upload_logs'
     
