@@ -17,7 +17,7 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Security
 - 🔐 **User Registration & Authentication** - Secure account management
-- 🔐 **Role-Based Access Control** - Three user roles: user, logadmin, sysop
+- 🔐 **Role-Based Access Control** - Four user roles: user, contestadmin, logadmin, sysop
 - 🔐 **Multi-Factor Authentication (MFA)** - TOTP support for Google Authenticator, Authy, and Microsoft Authenticator
 - 🔐 **API Keys** - Secure programmatic access for log uploads
 - 🔐 **Password Hashing** - bcrypt-based secure password storage
@@ -81,6 +81,7 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 2. **User Roles**
    - **user** (default) - Can manage their own logs
+   - **contestadmin** - Read-only access to all user logs with custom report generator
    - **logadmin** - Can view and reset logs for all users
    - **sysop** - Full administrative access to create, modify, and delete users
 
@@ -102,6 +103,33 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
    - Choose your ADIF file (.adi or .adif)
    - Click "Upload ADIF File"
    - Enter your API key when prompted
+
+## Contest Administration
+
+### Report Generator
+For **contestadmin** users, a powerful report generator is available:
+
+1. **Navigate to Contest Admin Tab**
+   - Click "Report Generator" subtab
+
+2. **Select Fields**
+   - Choose from standard ADIF fields (QSO Date, Time, Call, Band, Mode, etc.)
+   - Additional fields from ADIF JSON data are automatically discovered and listed
+
+3. **Apply Filters** (Optional)
+   - Date range (from/to)
+   - Bands (comma-separated: 20m, 40m, 80m)
+   - Modes (comma-separated: FT8, SSB, CW)
+
+4. **Generate Report**
+   - Click "Generate Report" to view results
+   - Export to CSV for analysis in Excel or other tools
+
+5. **Features**
+   - Read-only access to all user logs
+   - Custom field selection including JSON-stored ADIF fields
+   - CSV export for external analysis
+   - Up to 10,000 records per report
 
 ## API Documentation
 

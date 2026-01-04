@@ -17,7 +17,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     mfa_secret = db.Column(db.String(32), nullable=True)
     mfa_enabled = db.Column(db.Boolean, default=False)
-    role = db.Column(db.String(20), default='user')  # user, logadmin, sysop
+    role = db.Column(db.String(20), default='user')  # user, contestadmin, logadmin, sysop
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
@@ -31,7 +31,7 @@ class User(db.Model):
     
     def has_role(self, role):
         """Check if user has a specific role or higher"""
-        role_hierarchy = {'user': 0, 'logadmin': 1, 'sysop': 2}
+        role_hierarchy = {'user': 0, 'contestadmin': 1, 'logadmin': 2, 'sysop': 3}
         return role_hierarchy.get(self.role, 0) >= role_hierarchy.get(role, 0)
 
 

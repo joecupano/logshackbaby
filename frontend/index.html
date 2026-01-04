@@ -110,6 +110,7 @@
                         <button class="tab" data-tab="upload">Upload</button>
                         <button class="tab" data-tab="api-keys">API Keys</button>
                         <button class="tab" data-tab="settings">Settings</button>
+                        <button class="tab hidden" id="contestadmin-tab-btn" data-tab="contestadmin">Contest Admin</button>
                         <button class="tab hidden" id="logadmin-tab-btn" data-tab="logadmin">Log Admin</button>
                         <button class="tab hidden" id="sysop-tab-btn" data-tab="sysop">System Admin</button>
                     </div>
@@ -294,6 +295,82 @@
                         </div>
                     </div>
 
+                    <!-- Contest Admin Tab -->
+                    <div id="contestadmin-tab" class="tab-content">
+                        <h2>Contest Administration</h2>
+                        
+                        <div class="subtabs">
+                            <button class="subtab active" data-subtab="contestadmin-users">Users</button>
+                            <button class="subtab" data-subtab="contestadmin-report">Report Generator</button>
+                        </div>
+
+                        <div id="contestadmin-users" class="subtab-content active">
+                            <p>View user logs (read-only)</p>
+                            <div id="contestadmin-users-list"></div>
+                        </div>
+
+                        <div id="contestadmin-report" class="subtab-content">
+                            <h3>Generate Custom Report</h3>
+                            
+                            <div class="report-config">
+                                <div class="form-section">
+                                    <h4>Select Fields</h4>
+                                    <div class="field-grid">
+                                        <label><input type="checkbox" name="report-field" value="user_callsign" checked> User Callsign</label>
+                                        <label><input type="checkbox" name="report-field" value="qso_date" checked> QSO Date</label>
+                                        <label><input type="checkbox" name="report-field" value="time_on" checked> Time On</label>
+                                        <label><input type="checkbox" name="report-field" value="call" checked> Call</label>
+                                        <label><input type="checkbox" name="report-field" value="band"> Band</label>
+                                        <label><input type="checkbox" name="report-field" value="mode"> Mode</label>
+                                        <label><input type="checkbox" name="report-field" value="freq"> Frequency</label>
+                                        <label><input type="checkbox" name="report-field" value="rst_sent"> RST Sent</label>
+                                        <label><input type="checkbox" name="report-field" value="rst_rcvd"> RST Rcvd</label>
+                                        <label><input type="checkbox" name="report-field" value="station_callsign"> Station Callsign</label>
+                                        <label><input type="checkbox" name="report-field" value="my_gridsquare"> My Gridsquare</label>
+                                        <label><input type="checkbox" name="report-field" value="gridsquare"> Their Gridsquare</label>
+                                        <label><input type="checkbox" name="report-field" value="name"> Name</label>
+                                        <label><input type="checkbox" name="report-field" value="qth"> QTH</label>
+                                        <label><input type="checkbox" name="report-field" value="comment"> Comment</label>
+                                    </div>
+                                    <div id="additional-fields-container" class="hidden">
+                                        <h5>Additional Fields (from ADIF)</h5>
+                                        <div id="additional-fields-grid" class="field-grid"></div>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <h4>Filters (Optional)</h4>
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label>Date From</label>
+                                            <input type="date" id="report-date-from">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Date To</label>
+                                            <input type="date" id="report-date-to">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Bands (comma-separated)</label>
+                                            <input type="text" id="report-bands" placeholder="e.g., 20m, 40m, 80m">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Modes (comma-separated)</label>
+                                            <input type="text" id="report-modes" placeholder="e.g., FT8, SSB, CW">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button id="generate-report-btn" class="btn btn-primary">Generate Report</button>
+                                <button id="export-csv-btn" class="btn btn-secondary hidden">Export to CSV</button>
+                            </div>
+
+                            <div id="report-results" class="hidden">
+                                <h4>Results <span id="report-count"></span></h4>
+                                <div id="report-table-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Log Admin Tab -->
                     <div id="logadmin-tab" class="tab-content">
                         <h2>Log Administration</h2>
@@ -329,6 +406,7 @@
                                         <label>Role</label>
                                         <select id="admin-user-role">
                                             <option value="user">User</option>
+                                            <option value="contestadmin">Contest Admin</option>
                                             <option value="logadmin">Log Admin</option>
                                             <option value="sysop">System Operator</option>
                                         </select>

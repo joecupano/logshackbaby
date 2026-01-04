@@ -96,7 +96,7 @@ Then open your browser to: http://localhost
 2. **TOTP Multi-Factor Authentication** - Time-based one-time passwords
 3. **API Key Authentication** - Secure programmatic access
 4. **Session Management** - Database-backed secure session tokens
-5. **Role-Based Access Control** - Three user roles with distinct permissions
+5. **Role-Based Access Control** - Four user roles with distinct permissions
 6. **Database Isolation** - PostgreSQL only accessible via internal Docker network
 7. **SSL Support** - HTTPS via NGINX reverse proxy
 
@@ -108,6 +108,16 @@ Then open your browser to: http://localhost
 - Enable/disable MFA
 - Export personal logs
 - View personal statistics
+
+### contestadmin (Contest Administrator)
+- All user permissions
+- Read-only access to all users' logs
+- Custom report generator with field selection
+- Generate reports from all user logs combined
+- Filter by date range, bands, modes
+- Export reports to CSV
+- Access to JSON-stored ADIF fields
+- Access via "Contest Admin" tab
 
 ### logadmin (Log Administrator)
 - All user permissions
@@ -180,6 +190,38 @@ Then open your browser to: http://localhost
 - `GET /api/logadmin/users` - List all users with log counts
 - `GET /api/logadmin/users/:id/logs` - View specific user's logs
 - `DELETE /api/logadmin/users/:id/logs` - Reset (delete all) user's logs
+
+### Admin - Contest Admin
+- `GET /api/contestadmin/users` - List all users with log counts
+- `GET /api/contestadmin/users/:id/logs` - View specific user's logs (read-only)
+- `GET /api/contestadmin/available-fields` - Get all available ADIF fields including JSON fields
+- `POST /api/contestadmin/report` - Generate custom report from all user logs
+
+## 🏆 Contest Administration Features
+
+The **contestadmin** role provides powerful reporting capabilities for contest organizers:
+
+### Report Generator
+1. **Field Selection**
+   - Choose from 16 standard ADIF fields
+   - Automatic discovery of additional JSON-stored fields
+   - Mixed field selection (standard + custom)
+
+2. **Filtering Options**
+   - Date range (from/to)
+   - Band selection (e.g., 20m, 40m, 80m)
+   - Mode filtering (e.g., FT8, SSB, CW)
+   - User-specific filtering
+
+3. **Output Options**
+   - Interactive table view with up to 10,000 records
+   - CSV export for analysis in Excel/LibreOffice
+   - Properly formatted dates and times
+   - Escaped values for data integrity
+
+4. **Available Fields**
+   - **Standard**: user_callsign, qso_date, time_on, call, band, mode, freq, rst_sent, rst_rcvd, station_callsign, my_gridsquare, gridsquare, name, qth, comment
+   - **JSON Fields**: Any additional ADIF fields (contest_id, arrl_sect, srx, stx, operator, etc.)
 
 ## 🔧 Configuration
 

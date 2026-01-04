@@ -410,7 +410,108 @@ reset_user_logs(session_token, 5)
 | Role | Permissions |
 |------|-------------|
 | **user** | Manage own logs, API keys, and settings |
+| **contestadmin** | Read-only access to all user logs, generate custom reports from all logs |
 | **logadmin** | View all user logs, reset user logs |
 | **sysop** | Full system administration: create/modify/delete users, assign roles |
 
 **Note**: The first user registered automatically becomes a sysop.
+
+## Contest Admin Examples
+
+### Get Available Additional Fields
+```bash
+curl -X GET http://localhost/api/contestadmin/available-fields \
+  -H "X-Session-Token: YOUR_CONTESTADMIN_SESSION_TOKEN"
+```
+
+Response:
+```json
+{
+  "additional_fields": ["contest_id", "arrl_sect", "srx", "stx", "operator"]
+}
+```
+
+### Generate Custom Report
+```bash
+curl -X POST http://localhost/api/contestadmin/report \
+  -H "X-Session-Token: YOUR_CONTESTADMIN_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fields": ["user_callsign", "qso_date", "time_on", "call", "band", "mode", "json:contest_id"],
+    "filters": {
+      "date_from": "2025-12-01",
+      "date_to": "2025-12-31",
+      "bands": ["20m", "40m"],
+      "modes": ["FT8", "SSB"]
+    }
+  }'
+```
+
+Response:
+```json
+{
+  "report": [
+    {
+      "user_callsign": "W1ABC",
+      "qso_date": "20251215",
+      "time_on": "143000",
+      "call": "K2DEF",
+      "band": "20m",
+      "mode": "FT8",
+      "json:contest_id": "ARRL-10M"
+    }
+  ],
+  "total": 1,
+  "fields": ["user_callsign", "qso_date", "time_on", "call", "band", "mode", "json:contest_id"]
+}
+```
+
+### Python Contest Admin Example
+```python
+import requests
+import csv
+
+def generate_contest_report(session_token, fields, filters=None):
+    """Generate a custom report from all user logs"""
+    url = "http://localhost/api/contestadmin/report"
+    headers = {
+        "X-Session-Token": session_token,
+        "Content-Type": "application/json"
+    }
+    data = {"fields": fields}
+    if filters:
+        data["filters"] = filters
+    
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        result = response.json()
+        print(f"✅ Report generated: {result['total']} records")
+        return result['report']
+    else:
+        print(f"❌ Failed: {response.json().get('error')}")
+        return None
+
+def export_to_csv(report, fields, filename):
+    """Export report to CSV file"""
+    with open(filename, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(report)
+    print(f"✅ Exported to {filename}")
+
+# Usage
+session_token = "your_contestadmin_session_token"
+
+# Generate report with filters
+fields = ["user_callsign", "qso_date", "time_on", "call", "band", "mode"]
+filters = {
+    "date_from": "2025-12-01",
+    "date_to": "2025-12-31",
+    "bands": ["20m", "40m"]
+}
+
+report = generate_contest_report(session_token, fields, filters)
+if report:
+    export_to_csv(report, fields, "contest_report.csv")
+```

@@ -699,7 +699,7 @@ def admin_create_user():
     if not callsign or not email or not password:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    if role not in ['user', 'logadmin', 'sysop']:
+    if role not in ['user', 'contestadmin', 'logadmin', 'sysop']:
         return jsonify({'error': 'Invalid role'}), 400
     
     # Check if user exists
@@ -751,7 +751,7 @@ def admin_update_user(user_id):
     
     if 'role' in data:
         role = data['role']
-        if role not in ['user', 'logadmin', 'sysop']:
+        if role not in ['user', 'contestadmin', 'logadmin', 'sysop']:
             return jsonify({'error': 'Invalid role'}), 400
         user.role = role
     
@@ -800,6 +800,158 @@ def admin_delete_user(user_id):
     
     return jsonify({
         'message': f'User {callsign} and {log_count} log entries deleted successfully'
+    }), 200
+
+
+# Routes - Contest Admin
+@app.route('/api/contestadmin/users', methods=['GET'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_list_users():
+    """List all users with log info (contestadmin only)"""
+    users = User.query.all()
+    return jsonify({
+        'users': [{
+            'id': u.id,
+            'callsign': u.callsign,
+            'log_count': len(u.log_entries),
+            'created_at': u.created_at.isoformat()
+        } for u in users]
+    }), 200
+
+
+@app.route('/api/contestadmin/users/<int:user_id>/logs', methods=['GET'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_get_user_logs(user_id):
+    """Get logs for a specific user (contestadmin only - read only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Get logs
+    pagination = LogEntry.query.filter_by(user_id=user_id).order_by(
+        LogEntry.qso_date.desc(), 
+        LogEntry.time_on.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    
+    logs = [{
+        'id': log.id,
+        'qso_date': log.qso_date,
+        'time_on': log.time_on,
+        'call': log.call,
+        'band': log.band,
+        'mode': log.mode,
+        'freq': log.freq,
+        'rst_sent': log.rst_sent,
+        'rst_rcvd': log.rst_rcvd,
+        'station_callsign': log.station_callsign,
+        'comment': log.comment
+    } for log in pagination.items]
+    
+    return jsonify({
+        'user': {
+            'id': user.id,
+            'callsign': user.callsign
+        },
+        'logs': logs,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page
+    }), 200
+
+
+@app.route('/api/contestadmin/available-fields', methods=['GET'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_available_fields():
+    """Get all available fields including those in additional_fields JSON"""
+    # Get all unique keys from additional_fields JSON across all logs
+    logs = LogEntry.query.limit(1000).all()
+    json_fields = set()
+    
+    for log in logs:
+        if log.additional_fields:
+            json_fields.update(log.additional_fields.keys())
+    
+    return jsonify({
+        'additional_fields': sorted(list(json_fields))
+    }), 200
+
+
+@app.route('/api/contestadmin/report', methods=['POST'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_generate_report():
+    """Generate a custom report from all user logs"""
+    data = request.get_json()
+    
+    # Get selected fields
+    fields = data.get('fields', [])
+    if not fields:
+        return jsonify({'error': 'No fields selected'}), 400
+    
+    # Validate fields
+    valid_fields = [
+        'qso_date', 'time_on', 'call', 'band', 'mode', 'freq',
+        'rst_sent', 'rst_rcvd', 'station_callsign', 'my_gridsquare',
+        'gridsquare', 'name', 'qth', 'comment', 'qso_date_off', 'time_off'
+    ]
+    
+    for field in fields:
+        # Allow fields from JSON (prefixed with 'json:')
+        if field.startswith('json:'):
+            continue
+        if field not in valid_fields and field != 'user_callsign':
+            return jsonify({'error': f'Invalid field: {field}'}), 400
+    
+    # Get filters
+    filters = data.get('filters', {})
+    date_from = filters.get('date_from')
+    date_to = filters.get('date_to')
+    bands = filters.get('bands', [])
+    modes = filters.get('modes', [])
+    user_ids = filters.get('user_ids', [])
+    
+    # Build query
+    query = LogEntry.query.join(User)
+    
+    if date_from:
+        query = query.filter(LogEntry.qso_date >= date_from.replace('-', ''))
+    if date_to:
+        query = query.filter(LogEntry.qso_date <= date_to.replace('-', ''))
+    if bands:
+        query = query.filter(LogEntry.band.in_(bands))
+    if modes:
+        query = query.filter(LogEntry.mode.in_(modes))
+    if user_ids:
+        query = query.filter(LogEntry.user_id.in_(user_ids))
+    
+    # Get results
+    results = query.order_by(LogEntry.qso_date.desc(), LogEntry.time_on.desc()).limit(10000).all()
+    
+    # Build report data
+    report_data = []
+    for log in results:
+        row = {}
+        for field in fields:
+            if field == 'user_callsign':
+                row[field] = log.user.callsign
+            elif field.startswith('json:'):
+                # Extract from additional_fields JSON
+                json_key = field[5:]  # Remove 'json:' prefix
+                row[field] = log.additional_fields.get(json_key) if log.additional_fields else None
+            else:
+                row[field] = getattr(log, field, None)
+        report_data.append(row)
+    
+    return jsonify({
+        'report': report_data,
+        'total': len(report_data),
+        'fields': fields
     }), 200
 
 

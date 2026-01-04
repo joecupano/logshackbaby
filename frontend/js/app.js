@@ -73,6 +73,73 @@ function setupEventListeners() {
     document.getElementById('create-user-btn')?.addEventListener('click', showCreateUserForm);
     document.getElementById('cancel-create-user')?.addEventListener('click', hideCreateUserForm);
     document.getElementById('admin-create-user-form')?.addEventListener('submit', handleAdminCreateUser);
+    
+    // Contest Admin Report
+    document.getElementById('generate-report-btn')?.addEventListener('click', generateReport);
+    document.getElementById('export-csv-btn')?.addEventListener('click', exportReportToCSV);
+    
+    // Subtab navigation - using event delegation
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('.subtab')) {
+            switchContestAdminSubtab(e.target.dataset.subtab);
+        }
+    });
+}
+
+function switchContestAdminSubtab(subtabName) {
+    // Update subtab buttons
+    document.querySelectorAll('#contestadmin-tab .subtab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelector(`#contestadmin-tab [data-subtab="${subtabName}"]`).classList.add('active');
+    
+    // Update subtab content
+    document.querySelectorAll('#contestadmin-tab .subtab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(subtabName).classList.add('active');
+    
+    // Load data if needed
+    if (subtabName === 'contestadmin-users') {
+        loadContestAdminUsers();
+    } else if (subtabName === 'contestadmin-report') {
+        loadAdditionalFields();
+    }
+}
+
+async function loadAdditionalFields() {
+    const container = document.getElementById('additional-fields-container');
+    const grid = document.getElementById('additional-fields-grid');
+    
+    try {
+        const response = await apiCall('/contestadmin/available-fields');
+        const data = await response.json();
+        
+        console.log('Additional fields response:', data);
+        
+        if (response.ok) {
+            if (data.additional_fields && data.additional_fields.length > 0) {
+                const html = data.additional_fields.map(field => {
+                    const label = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return `<label><input type="checkbox" name="report-field" value="json:${field}"> ${label}</label>`;
+                }).join('');
+                
+                grid.innerHTML = html;
+                container.classList.remove('hidden');
+            } else {
+                grid.innerHTML = '<p style="font-style: italic; color: #666;">No additional ADIF fields found in current logs</p>';
+                container.classList.remove('hidden');
+            }
+        } else {
+            console.error('Failed to load additional fields:', data);
+            grid.innerHTML = '<p style="font-style: italic; color: #999;">Unable to load additional fields</p>';
+            container.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading additional fields:', error);
+        grid.innerHTML = '<p style="font-style: italic; color: #999;">Error loading additional fields</p>';
+        container.classList.remove('hidden');
+    }
 }
 
 // Screen Management
@@ -117,6 +184,9 @@ function switchTab(tabName) {
             break;
         case 'settings':
             loadSettings();
+            break;
+        case 'contestadmin':
+            loadContestAdminUsers();
             break;
         case 'logadmin':
             loadLogAdminUsers();
@@ -292,11 +362,15 @@ async function loadDashboard() {
     showScreen('dashboard');
     
     // Hide admin tabs by default
+    document.getElementById('contestadmin-tab-btn').classList.add('hidden');
     document.getElementById('logadmin-tab-btn').classList.add('hidden');
     document.getElementById('sysop-tab-btn').classList.add('hidden');
     
     // Show admin tabs based on role (exclusive - only show tab for exact role)
     const userRole = localStorage.getItem('userRole') || 'user';
+    if (userRole === 'contestadmin') {
+        document.getElementById('contestadmin-tab-btn').classList.remove('hidden');
+    }
     if (userRole === 'logadmin') {
         document.getElementById('logadmin-tab-btn').classList.remove('hidden');
     }
@@ -765,6 +839,256 @@ function formatDateTime(isoStr) {
     return date.toLocaleString();
 }
 
+// Admin Functions - Contest Admin
+async function loadContestAdminUsers() {
+    try {
+        const response = await apiCall('/contestadmin/users');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayContestAdminUsers(data.users);
+        }
+    } catch (error) {
+        showMessage('Failed to load users', 'error');
+    }
+}
+
+function displayContestAdminUsers(users) {
+    const container = document.getElementById('contestadmin-users-list');
+    
+    if (users.length === 0) {
+        container.innerHTML = '<p>No users found</p>';
+        return;
+    }
+    
+    const html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Callsign</th>
+                    <th>Log Count</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(u => `
+                    <tr>
+                        <td><strong>${u.callsign}</strong></td>
+                        <td>${u.log_count}</td>
+                        <td>${formatDateTime(u.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm" onclick="viewContestUserLogs(${u.id}, '${u.callsign}')">View Logs</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+async function viewContestUserLogs(userId, callsign) {
+    try {
+        const response = await apiCall(`/contestadmin/users/${userId}/logs?page=1&per_page=100`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            const logs = data.logs;
+            const logHtml = logs.length > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Call</th>
+                            <th>Band</th>
+                            <th>Mode</th>
+                            <th>RST Sent</th>
+                            <th>RST Rcvd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${logs.map(log => `
+                            <tr>
+                                <td>${formatDate(log.qso_date)}</td>
+                                <td>${formatTime(log.time_on)}</td>
+                                <td><strong>${log.call}</strong></td>
+                                <td>${log.band || '-'}</td>
+                                <td>${log.mode || '-'}</td>
+                                <td>${log.rst_sent || '-'}</td>
+                                <td>${log.rst_rcvd || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <p>Total: ${data.total} logs (Read-only access)</p>
+            ` : '<p>No logs found for this user</p>';
+            
+            const modal = `
+                <div class="modal-overlay" id="contest-user-logs-modal">
+                    <div class="modal-content">
+                        <h3>${callsign}'s Logs</h3>
+                        ${logHtml}
+                        <button class="btn" onclick="closeModal('contest-user-logs-modal')">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modal);
+        }
+    } catch (error) {
+        showMessage('Failed to load user logs', 'error');
+    }
+}
+
+async function generateReport() {
+    const checkboxes = document.querySelectorAll('input[name="report-field"]:checked');
+    const fields = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (fields.length === 0) {
+        showMessage('Please select at least one field', 'error');
+        return;
+    }
+    
+    // Get filters
+    const filters = {};
+    const dateFrom = document.getElementById('report-date-from').value;
+    const dateTo = document.getElementById('report-date-to').value;
+    const bandsInput = document.getElementById('report-bands').value;
+    const modesInput = document.getElementById('report-modes').value;
+    
+    if (dateFrom) filters.date_from = dateFrom;
+    if (dateTo) filters.date_to = dateTo;
+    if (bandsInput) filters.bands = bandsInput.split(',').map(b => b.trim());
+    if (modesInput) filters.modes = modesInput.split(',').map(m => m.trim());
+    
+    try {
+        const response = await apiCall('/contestadmin/report', {
+            method: 'POST',
+            body: JSON.stringify({ fields, filters })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayReport(data.report, data.fields, data.total);
+            showMessage('Report generated successfully', 'success');
+        } else {
+            showMessage(data.error || 'Failed to generate report', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to generate report', 'error');
+    }
+}
+
+function displayReport(report, fields, total) {
+    const container = document.getElementById('report-table-container');
+    const resultsDiv = document.getElementById('report-results');
+    const countSpan = document.getElementById('report-count');
+    const exportBtn = document.getElementById('export-csv-btn');
+    
+    countSpan.textContent = `(${total} records)`;
+    resultsDiv.classList.remove('hidden');
+    exportBtn.classList.remove('hidden');
+    
+    // Store report data for export
+    window.currentReport = { report, fields };
+    
+    if (report.length === 0) {
+        container.innerHTML = '<p>No results found</p>';
+        return;
+    }
+    
+    // Build table headers
+    const headers = fields.map(f => {
+        let label = f;
+        // Handle JSON fields
+        if (f.startsWith('json:')) {
+            label = f.substring(5); // Remove 'json:' prefix
+        }
+        label = label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return `<th>${label}</th>`;
+    }).join('');
+    
+    // Build table rows
+    const rows = report.map(row => {
+        const cells = fields.map(field => {
+            let value = row[field] || '-';
+            
+            // Format date
+            if (field === 'qso_date' && value !== '-') {
+                value = formatDate(value);
+            }
+            // Format time
+            if ((field === 'time_on' || field === 'time_off') && value !== '-') {
+                value = formatTime(value);
+            }
+            
+            return `<td>${value}</td>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+    }).join('');
+    
+    container.innerHTML = `
+        <div style="max-height: 600px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>${headers}</tr>
+                </thead>
+                <tbody>
+                    ${rows}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function exportReportToCSV() {
+    if (!window.currentReport) {
+        showMessage('No report to export', 'error');
+        return;
+    }
+    
+    const { report, fields } = window.currentReport;
+    
+    // Build CSV headers
+    const headers = fields.map(f => {
+        let label = f;
+        if (f.startsWith('json:')) {
+            label = f.substring(5); // Remove 'json:' prefix
+        }
+        return label.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    });
+    const csvRows = [headers.join(',')];
+    
+    report.forEach(row => {
+        const values = fields.map(field => {
+            let value = row[field] || '';
+            // Escape commas and quotes
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                value = `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        });
+        csvRows.push(values.join(','));
+    });
+    
+    const csv = csvRows.join('\n');
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `contest_report_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    showMessage('Report exported to CSV', 'success');
+}
+
 // Admin Functions - Log Admin
 async function loadLogAdminUsers() {
     try {
@@ -987,8 +1311,8 @@ async function handleAdminCreateUser(e) {
 }
 
 async function editUser(userId) {
-    const newRole = prompt('Enter new role (user/logadmin/sysop):');
-    if (!newRole || !['user', 'logadmin', 'sysop'].includes(newRole)) {
+    const newRole = prompt('Enter new role (user/contestadmin/logadmin/sysop):');
+    if (!newRole || !['user', 'contestadmin', 'logadmin', 'sysop'].includes(newRole)) {
         if (newRole) showMessage('Invalid role', 'error');
         return;
     }
