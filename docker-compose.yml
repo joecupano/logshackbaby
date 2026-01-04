@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: logshackbaby-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: logshackbaby
+      POSTGRES_USER: logshackbaby
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-logshackbaby_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - logshackbaby-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logshackbaby"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LogShackBaby Application
+  app:
+    build: ./backend
+    container_name: logshackbaby-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://logshackbaby:${DB_PASSWORD:-logshackbaby_password}@db:5432/logshackbaby
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
+      FLASK_ENV: production
+    volumes:
+      - ./backend:/app
+      - ./frontend:/app/../frontend
+    networks:
+      - logshackbaby-network
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 5 &&
+        flask --app app init-db || true &&
+        gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
+      "
+
+  # NGINX Reverse Proxy (optional - for local testing)
+  # In production, use your existing NGINX container
+  nginx:
+    image: nginx:alpine
+    container_name: logshackbaby-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - logshackbaby-network
+    depends_on:
+      - app
+
+networks:
+  logshackbaby-network:
+    driver: bridge
+    name: logshackbaby-network
+
+volumes:
+  postgres_data:
+    driver: local

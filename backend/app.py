@@ -1,0 +1,655 @@
+"""
+LogShackBaby - Amateur Radio Log Server
+Main Flask application
+"""
+import os
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+from dotenv import load_dotenv
+from functools import wraps
+from datetime import datetime
+
+from models import db, User, APIKey, LogEntry, UploadLog
+from auth import AuthManager
+from adif_parser import ADIFParser
+
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
+CORS(app)
+
+# Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+    'postgresql://logshackbaby:logshackbaby@db:5432/logshackbaby'
+)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-this-in-production')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Initialize database
+db.init_app(app)
+
+# Session storage (in production, use Redis or database-backed sessions)
+sessions = {}
+
+
+def require_auth(f):
+    """Decorator to require session authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        session_token = request.headers.get('X-Session-Token')
+        
+        if not session_token or session_token not in sessions:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Check if MFA is required but not completed
+        session = sessions[session_token]
+        if session.get('mfa_required') and not session.get('mfa_verified'):
+            return jsonify({'error': 'MFA verification required'}), 403
+        
+        request.current_user = User.query.get(session['user_id'])
+        if not request.current_user:
+            return jsonify({'error': 'User not found'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def require_api_key(f):
+    """Decorator to require API key authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        
+        if not api_key:
+            return jsonify({'error': 'API key required'}), 401
+        
+        user = AuthManager.verify_api_key(api_key)
+        if not user:
+            return jsonify({'error': 'Invalid API key'}), 401
+        
+        request.current_user = user
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Routes - Serve Frontend
+@app.route('/')
+def index():
+    """Serve the main frontend page"""
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, path)
+
+
+# Routes - Authentication
+@app.route('/api/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    data = request.get_json()
+    
+    callsign = data.get('callsign', '').strip().upper()
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    
+    if not callsign or not email or not password:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    user, error = AuthManager.create_user(callsign, email, password)
+    
+    if error:
+        return jsonify({'error': error}), 400
+    
+    return jsonify({
+        'message': 'Registration successful',
+        'callsign': user.callsign
+    }), 201
+
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """Login user"""
+    data = request.get_json()
+    
+    callsign = data.get('callsign', '').strip().upper()
+    password = data.get('password', '')
+    
+    user = AuthManager.authenticate_user(callsign, password)
+    
+    if not user:
+        return jsonify({'error': 'Invalid credentials'}), 401
+    
+    # Create session
+    import secrets
+    session_token = secrets.token_urlsafe(32)
+    
+    sessions[session_token] = {
+        'user_id': user.id,
+        'mfa_required': user.mfa_enabled,
+        'mfa_verified': not user.mfa_enabled,
+        'created_at': datetime.utcnow()
+    }
+    
+    return jsonify({
+        'session_token': session_token,
+        'callsign': user.callsign,
+        'mfa_required': user.mfa_enabled
+    }), 200
+
+
+@app.route('/api/logout', methods=['POST'])
+@require_auth
+def logout():
+    """Logout user"""
+    session_token = request.headers.get('X-Session-Token')
+    if session_token in sessions:
+        del sessions[session_token]
+    
+    return jsonify({'message': 'Logged out successfully'}), 200
+
+
+# Routes - MFA
+@app.route('/api/mfa/setup', methods=['POST'])
+@require_auth
+def mfa_setup():
+    """Setup MFA for user"""
+    user = request.current_user
+    
+    if user.mfa_enabled:
+        return jsonify({'error': 'MFA already enabled'}), 400
+    
+    # Generate secret
+    secret = AuthManager.generate_mfa_secret()
+    
+    # Store secret (not enabled yet)
+    user.mfa_secret = secret
+    db.session.commit()
+    
+    # Generate QR code
+    qr_code = AuthManager.generate_qr_code(user.callsign, secret)
+    
+    return jsonify({
+        'secret': secret,
+        'qr_code': qr_code
+    }), 200
+
+
+@app.route('/api/mfa/enable', methods=['POST'])
+@require_auth
+def mfa_enable():
+    """Enable MFA after verifying token"""
+    data = request.get_json()
+    token = data.get('token', '')
+    
+    user = request.current_user
+    
+    if not user.mfa_secret:
+        return jsonify({'error': 'MFA not set up'}), 400
+    
+    if not AuthManager.verify_mfa_token(user.mfa_secret, token):
+        return jsonify({'error': 'Invalid token'}), 400
+    
+    user.mfa_enabled = True
+    db.session.commit()
+    
+    return jsonify({'message': 'MFA enabled successfully'}), 200
+
+
+@app.route('/api/mfa/verify', methods=['POST'])
+def mfa_verify():
+    """Verify MFA token during login"""
+    data = request.get_json()
+    session_token = data.get('session_token', '')
+    token = data.get('token', '')
+    
+    if session_token not in sessions:
+        return jsonify({'error': 'Invalid session'}), 401
+    
+    session = sessions[session_token]
+    user = User.query.get(session['user_id'])
+    
+    if not user or not user.mfa_enabled:
+        return jsonify({'error': 'MFA not enabled'}), 400
+    
+    if not AuthManager.verify_mfa_token(user.mfa_secret, token):
+        return jsonify({'error': 'Invalid token'}), 400
+    
+    # Mark MFA as verified in session
+    session['mfa_verified'] = True
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({'message': 'MFA verified successfully'}), 200
+
+
+@app.route('/api/mfa/disable', methods=['POST'])
+@require_auth
+def mfa_disable():
+    """Disable MFA"""
+    data = request.get_json()
+    password = data.get('password', '')
+    
+    user = request.current_user
+    
+    if not AuthManager.verify_password(password, user.password_hash):
+        return jsonify({'error': 'Invalid password'}), 401
+    
+    user.mfa_enabled = False
+    user.mfa_secret = None
+    db.session.commit()
+    
+    return jsonify({'message': 'MFA disabled successfully'}), 200
+
+
+# Routes - API Keys
+@app.route('/api/keys', methods=['GET'])
+@require_auth
+def list_api_keys():
+    """List user's API keys"""
+    user = request.current_user
+    
+    keys = APIKey.query.filter_by(user_id=user.id).all()
+    
+    return jsonify({
+        'keys': [{
+            'id': key.id,
+            'prefix': key.key_prefix,
+            'description': key.description,
+            'created_at': key.created_at.isoformat(),
+            'last_used': key.last_used.isoformat() if key.last_used else None,
+            'is_active': key.is_active
+        } for key in keys]
+    }), 200
+
+
+@app.route('/api/keys', methods=['POST'])
+@require_auth
+def create_api_key():
+    """Create a new API key"""
+    data = request.get_json()
+    description = data.get('description', '').strip()
+    
+    user = request.current_user
+    
+    # Generate key
+    full_key, key_hash, key_prefix = AuthManager.generate_api_key()
+    
+    # Store in database
+    api_key = APIKey(
+        user_id=user.id,
+        key_hash=key_hash,
+        key_prefix=key_prefix,
+        description=description
+    )
+    
+    db.session.add(api_key)
+    db.session.commit()
+    
+    return jsonify({
+        'api_key': full_key,
+        'prefix': key_prefix,
+        'message': 'Store this key safely - it will not be shown again'
+    }), 201
+
+
+@app.route('/api/keys/<int:key_id>', methods=['DELETE'])
+@require_auth
+def delete_api_key(key_id):
+    """Delete an API key"""
+    user = request.current_user
+    
+    api_key = APIKey.query.filter_by(id=key_id, user_id=user.id).first()
+    
+    if not api_key:
+        return jsonify({'error': 'API key not found'}), 404
+    
+    db.session.delete(api_key)
+    db.session.commit()
+    
+    return jsonify({'message': 'API key deleted'}), 200
+
+
+# Routes - Log Upload and Management
+@app.route('/api/logs/upload', methods=['POST'])
+@require_api_key
+def upload_log():
+    """Upload ADIF log file"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    user = request.current_user
+    
+    # Create upload log entry
+    upload_log = UploadLog(
+        user_id=user.id,
+        filename=file.filename,
+        status='processing'
+    )
+    db.session.add(upload_log)
+    db.session.commit()
+    
+    try:
+        # Parse ADIF file
+        parser = ADIFParser()
+        file_content = file.read()
+        records = parser.parse_file(file_content)
+        
+        upload_log.total_records = len(records)
+        
+        # Process records
+        new_count = 0
+        duplicate_count = 0
+        error_count = 0
+        
+        for record in records:
+            try:
+                # Check for duplicate
+                existing = LogEntry.query.filter_by(
+                    user_id=user.id,
+                    qso_hash=record['qso_hash']
+                ).first()
+                
+                if existing:
+                    duplicate_count += 1
+                    continue
+                
+                # Create new log entry
+                log_entry = LogEntry(
+                    user_id=user.id,
+                    qso_date=record.get('qso_date'),
+                    time_on=record.get('time_on'),
+                    call=record.get('call'),
+                    band=record.get('band'),
+                    mode=record.get('mode'),
+                    freq=record.get('freq'),
+                    rst_sent=record.get('rst_sent'),
+                    rst_rcvd=record.get('rst_rcvd'),
+                    qso_date_off=record.get('qso_date_off'),
+                    time_off=record.get('time_off'),
+                    station_callsign=record.get('station_callsign'),
+                    my_gridsquare=record.get('my_gridsquare'),
+                    gridsquare=record.get('gridsquare'),
+                    name=record.get('name'),
+                    qth=record.get('qth'),
+                    comment=record.get('comment'),
+                    additional_fields=record.get('additional_fields'),
+                    qso_hash=record['qso_hash']
+                )
+                
+                db.session.add(log_entry)
+                new_count += 1
+                
+            except Exception as e:
+                error_count += 1
+                print(f"Error processing record: {e}")
+        
+        # Commit all new entries
+        db.session.commit()
+        
+        # Update upload log
+        upload_log.new_records = new_count
+        upload_log.duplicate_records = duplicate_count
+        upload_log.error_records = error_count
+        upload_log.status = 'completed'
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Upload successful',
+            'total': len(records),
+            'new': new_count,
+            'duplicates': duplicate_count,
+            'errors': error_count
+        }), 200
+        
+    except Exception as e:
+        upload_log.status = 'failed'
+        db.session.commit()
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
+
+@app.route('/api/logs', methods=['GET'])
+@require_auth
+def get_logs():
+    """Get user's log entries"""
+    user = request.current_user
+    
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Filters
+    callsign = request.args.get('callsign', '').upper()
+    band = request.args.get('band', '')
+    mode = request.args.get('mode', '')
+    
+    # Build query
+    query = LogEntry.query.filter_by(user_id=user.id)
+    
+    if callsign:
+        query = query.filter(LogEntry.call.ilike(f'%{callsign}%'))
+    if band:
+        query = query.filter_by(band=band)
+    if mode:
+        query = query.filter_by(mode=mode)
+    
+    # Order by date/time descending
+    query = query.order_by(LogEntry.qso_date.desc(), LogEntry.time_on.desc())
+    
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'logs': [{
+            'id': log.id,
+            'qso_date': log.qso_date,
+            'time_on': log.time_on,
+            'call': log.call,
+            'band': log.band,
+            'mode': log.mode,
+            'freq': log.freq,
+            'rst_sent': log.rst_sent,
+            'rst_rcvd': log.rst_rcvd,
+            'station_callsign': log.station_callsign,
+            'gridsquare': log.gridsquare,
+            'name': log.name,
+            'comment': log.comment
+        } for log in pagination.items],
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': page
+    }), 200
+
+
+@app.route('/api/logs/stats', methods=['GET'])
+@require_auth
+def get_log_stats():
+    """Get statistics about user's logs"""
+    user = request.current_user
+    
+    total_qsos = LogEntry.query.filter_by(user_id=user.id).count()
+    
+    # Get unique callsigns worked
+    unique_calls = db.session.query(LogEntry.call).filter_by(
+        user_id=user.id
+    ).distinct().count()
+    
+    # Get band breakdown
+    band_stats = db.session.query(
+        LogEntry.band,
+        db.func.count(LogEntry.id)
+    ).filter_by(user_id=user.id).group_by(LogEntry.band).all()
+    
+    # Get mode breakdown
+    mode_stats = db.session.query(
+        LogEntry.mode,
+        db.func.count(LogEntry.id)
+    ).filter_by(user_id=user.id).group_by(LogEntry.mode).all()
+    
+    return jsonify({
+        'total_qsos': total_qsos,
+        'unique_callsigns': unique_calls,
+        'bands': {band: count for band, count in band_stats if band},
+        'modes': {mode: count for mode, count in mode_stats if mode}
+    }), 200
+
+
+@app.route('/api/uploads', methods=['GET'])
+@require_auth
+def get_uploads():
+    """Get upload history"""
+    user = request.current_user
+    
+    uploads = UploadLog.query.filter_by(user_id=user.id).order_by(
+        UploadLog.uploaded_at.desc()
+    ).limit(50).all()
+    
+    return jsonify({
+        'uploads': [{
+            'id': upload.id,
+            'filename': upload.filename,
+            'uploaded_at': upload.uploaded_at.isoformat(),
+            'total_records': upload.total_records,
+            'new_records': upload.new_records,
+            'duplicate_records': upload.duplicate_records,
+            'error_records': upload.error_records,
+            'status': upload.status
+        } for upload in uploads]
+    }), 200
+
+
+@app.route('/api/logs/export', methods=['GET'])
+@require_auth
+def export_logs():
+    """Export logs in ADIF format"""
+    user = request.current_user
+    
+    # Get filters
+    callsign = request.args.get('callsign', '').upper()
+    band = request.args.get('band', '')
+    mode = request.args.get('mode', '')
+    
+    # Build query
+    query = LogEntry.query.filter_by(user_id=user.id)
+    
+    if callsign:
+        query = query.filter(LogEntry.call.ilike(f'%{callsign}%'))
+    if band:
+        query = query.filter_by(band=band)
+    if mode:
+        query = query.filter_by(mode=mode)
+    
+    # Order by date/time
+    logs = query.order_by(LogEntry.qso_date, LogEntry.time_on).all()
+    
+    # Build ADIF file
+    adif_content = generate_adif_export(logs, user.callsign)
+    
+    # Create response with proper headers
+    from flask import make_response
+    response = make_response(adif_content)
+    response.headers['Content-Type'] = 'text/plain'
+    response.headers['Content-Disposition'] = f'attachment; filename="{user.callsign}_logbook.adi"'
+    
+    return response
+
+
+def generate_adif_export(logs, callsign):
+    """Generate ADIF file content from log entries"""
+    from datetime import datetime
+    
+    # ADIF header
+    header = f"""ADIF export from LogShackBaby
+<ADIF_VER:5>3.1.4
+<PROGRAMID:12>LogShackBaby
+<PROGRAMVERSION:5>1.0.0
+<CREATED_TIMESTAMP:15>{datetime.utcnow().strftime('%Y%m%d %H%M%S')}
+<EOH>
+
+"""
+    
+    records = []
+    
+    for log in logs:
+        fields = []
+        
+        # Add core fields in standard order
+        if log.station_callsign:
+            fields.append(f"<STATION_CALLSIGN:{len(log.station_callsign)}>{log.station_callsign}")
+        
+        fields.append(f"<CALL:{len(log.call)}>{log.call}")
+        fields.append(f"<QSO_DATE:{len(log.qso_date)}>{log.qso_date}")
+        fields.append(f"<TIME_ON:{len(log.time_on)}>{log.time_on}")
+        
+        if log.qso_date_off:
+            fields.append(f"<QSO_DATE_OFF:{len(log.qso_date_off)}>{log.qso_date_off}")
+        if log.time_off:
+            fields.append(f"<TIME_OFF:{len(log.time_off)}>{log.time_off}")
+        
+        if log.band:
+            fields.append(f"<BAND:{len(log.band)}>{log.band}")
+        if log.freq:
+            fields.append(f"<FREQ:{len(log.freq)}>{log.freq}")
+        if log.mode:
+            fields.append(f"<MODE:{len(log.mode)}>{log.mode}")
+        
+        if log.rst_sent:
+            fields.append(f"<RST_SENT:{len(log.rst_sent)}>{log.rst_sent}")
+        if log.rst_rcvd:
+            fields.append(f"<RST_RCVD:{len(log.rst_rcvd)}>{log.rst_rcvd}")
+        
+        if log.my_gridsquare:
+            fields.append(f"<MY_GRIDSQUARE:{len(log.my_gridsquare)}>{log.my_gridsquare}")
+        if log.gridsquare:
+            fields.append(f"<GRIDSQUARE:{len(log.gridsquare)}>{log.gridsquare}")
+        
+        if log.name:
+            fields.append(f"<NAME:{len(log.name)}>{log.name}")
+        if log.qth:
+            fields.append(f"<QTH:{len(log.qth)}>{log.qth}")
+        if log.comment:
+            fields.append(f"<COMMENT:{len(log.comment)}>{log.comment}")
+        
+        # Add additional fields from JSON
+        if log.additional_fields:
+            for field_name, field_value in log.additional_fields.items():
+                field_value_str = str(field_value)
+                fields.append(f"<{field_name.upper()}:{len(field_value_str)}>{field_value_str}")
+        
+        # Join fields with space and add EOR
+        record = ' '.join(fields) + ' <EOR>\n'
+        records.append(record)
+    
+    return header + ''.join(records)
+
+
+# Health check
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy'}), 200
+
+
+# Database initialization
+@app.cli.command('init-db')
+def init_db():
+    """Initialize the database"""
+    db.create_all()
+    print('Database initialized!')
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=5000, debug=False)

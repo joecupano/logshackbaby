@@ -1,0 +1,23 @@
+# Docker Compose Override for Development
+# Use this with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - ./frontend:/app/../frontend
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    command: python app.py
+    ports:
+      - "5000:5000"
+
+  db:
+    ports:
+      - "5432:5432"  # Expose database port for development tools

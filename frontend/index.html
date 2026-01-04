@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogShackBaby - Amateur Radio Log Server</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav id="navbar" class="navbar hidden">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <span class="radio-icon">📻</span>
+                    <span class="brand-name">LogShackBaby</span>
+                </div>
+                <div class="nav-user">
+                    <span id="nav-callsign"></span>
+                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen active">
+            <div class="container">
+                <div class="auth-box">
+                    <div class="header">
+                        <h1><span class="radio-icon">📻</span> LogShackBaby</h1>
+                        <p>Amateur Radio Log Server</p>
+                    </div>
+
+                    <div id="login-form-container">
+                        <h2>Login</h2>
+                        <form id="login-form">
+                            <div class="form-group">
+                                <label>Callsign</label>
+                                <input type="text" id="login-callsign" required placeholder="W1ABC">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input type="password" id="login-password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Login</button>
+                        </form>
+                        <p class="text-center">
+                            Don't have an account? 
+                            <a href="#" id="show-register">Register</a>
+                        </p>
+                    </div>
+
+                    <div id="mfa-verify-container" class="hidden">
+                        <h2>Two-Factor Authentication</h2>
+                        <p>Enter the 6-digit code from your authenticator app</p>
+                        <form id="mfa-verify-form">
+                            <div class="form-group">
+                                <label>Authentication Code</label>
+                                <input type="text" id="mfa-verify-code" required maxlength="6" pattern="[0-9]{6}" placeholder="000000">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">Verify</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Screen -->
+        <div id="register-screen" class="screen">
+            <div class="container">
+                <div class="auth-box">
+                    <div class="header">
+                        <h1><span class="radio-icon">📻</span> LogShackBaby</h1>
+                        <p>Create Your Account</p>
+                    </div>
+
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label>Callsign *</label>
+                            <input type="text" id="register-callsign" required placeholder="W1ABC">
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" id="register-email" required placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Password *</label>
+                            <input type="password" id="register-password" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Password *</label>
+                            <input type="password" id="register-password-confirm" required minlength="8">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Register</button>
+                    </form>
+                    <p class="text-center">
+                        Already have an account? 
+                        <a href="#" id="show-login">Login</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen">
+            <div class="container">
+                <div class="dashboard">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="logs">My Logs</button>
+                        <button class="tab" data-tab="upload">Upload</button>
+                        <button class="tab" data-tab="api-keys">API Keys</button>
+                        <button class="tab" data-tab="settings">Settings</button>
+                    </div>
+
+                    <!-- Logs Tab -->
+                    <div id="logs-tab" class="tab-content active">
+                        <h2>My Logbook</h2>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="stat-total-qsos">0</div>
+                                <div class="stat-label">Total QSOs</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="stat-unique-calls">0</div>
+                                <div class="stat-label">Unique Callsigns</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="stat-bands">0</div>
+                                <div class="stat-label">Bands Worked</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="stat-modes">0</div>
+                                <div class="stat-label">Modes Used</div>
+                            </div>
+                        </div>
+
+                        <div class="filters">
+                            <input type="text" id="filter-callsign" placeholder="Filter by callsign...">
+                            <select id="filter-band">
+                                <option value="">All Bands</option>
+                            </select>
+                            <select id="filter-mode">
+                                <option value="">All Modes</option>
+                            </select>
+                            <button id="apply-filters" class="btn btn-primary">Apply</button>
+                            <button id="export-logs-btn" class="btn btn-secondary">📥 Export ADIF</button>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="logs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Callsign</th>
+                                        <th>Band</th>
+                                        <th>Mode</th>
+                                        <th>RST Sent</th>
+                                        <th>RST Rcvd</th>
+                                        <th>Grid</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-tbody">
+                                    <tr>
+                                        <td colspan="8" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="pagination" id="logs-pagination"></div>
+                    </div>
+
+                    <!-- Upload Tab -->
+                    <div id="upload-tab" class="tab-content">
+                        <h2>Upload ADIF Log</h2>
+                        
+                        <div class="upload-section">
+                            <div class="upload-instructions">
+                                <h3>How to Upload</h3>
+                                <ol>
+                                    <li>Export your log from your logging software in ADIF format (.adi or .adif)</li>
+                                    <li>Click "Choose File" below and select your ADIF file</li>
+                                    <li>Click "Upload" - duplicates will be automatically skipped</li>
+                                </ol>
+                                <p class="note">Maximum file size: 16MB</p>
+                            </div>
+
+                            <div class="upload-form">
+                                <input type="file" id="adif-file" accept=".adi,.adif" class="file-input">
+                                <button id="upload-btn" class="btn btn-primary btn-block">Upload ADIF File</button>
+                            </div>
+
+                            <div id="upload-result" class="hidden"></div>
+                        </div>
+
+                        <h3>Upload History</h3>
+                        <div class="table-container">
+                            <table id="uploads-table">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Date</th>
+                                        <th>Total</th>
+                                        <th>New</th>
+                                        <th>Duplicates</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="uploads-tbody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">No uploads yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- API Keys Tab -->
+                    <div id="api-keys-tab" class="tab-content">
+                        <h2>API Keys</h2>
+                        
+                        <div class="api-info">
+                            <p>API keys allow you to upload logs programmatically. Keep your keys secure!</p>
+                            <p><strong>Upload Endpoint:</strong> <code>POST /api/logs/upload</code></p>
+                            <p><strong>Header:</strong> <code>X-API-Key: your-api-key-here</code></p>
+                        </div>
+
+                        <button id="create-api-key-btn" class="btn btn-primary">Create New API Key</button>
+
+                        <div id="new-api-key-display" class="hidden">
+                            <div class="alert alert-success">
+                                <strong>Your new API key (save it now - you won't see it again):</strong>
+                                <div class="api-key-display">
+                                    <code id="new-api-key-value"></code>
+                                    <button id="copy-api-key" class="btn btn-secondary btn-small">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table id="api-keys-table">
+                                <thead>
+                                    <tr>
+                                        <th>Prefix</th>
+                                        <th>Description</th>
+                                        <th>Created</th>
+                                        <th>Last Used</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="api-keys-tbody">
+                                    <tr>
+                                        <td colspan="5" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div id="settings-tab" class="tab-content">
+                        <h2>Settings</h2>
+                        
+                        <div class="settings-section">
+                            <h3>Two-Factor Authentication</h3>
+                            
+                            <div id="mfa-disabled" class="hidden">
+                                <p>Protect your account with two-factor authentication using apps like Google Authenticator, Authy, or Microsoft Authenticator.</p>
+                                <button id="enable-mfa-btn" class="btn btn-primary">Enable 2FA</button>
+                            </div>
+
+                            <div id="mfa-setup" class="hidden">
+                                <p>Scan this QR code with your authenticator app:</p>
+                                <div id="mfa-qr-code"></div>
+                                <p>Or enter this secret manually: <code id="mfa-secret"></code></p>
+                                <form id="mfa-enable-form">
+                                    <div class="form-group">
+                                        <label>Enter verification code:</label>
+                                        <input type="text" id="mfa-enable-code" required maxlength="6" pattern="[0-9]{6}">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Verify & Enable</button>
+                                    <button type="button" id="cancel-mfa-setup" class="btn btn-secondary">Cancel</button>
+                                </form>
+                            </div>
+
+                            <div id="mfa-enabled" class="hidden">
+                                <p class="success">✓ Two-factor authentication is enabled</p>
+                                <button id="disable-mfa-btn" class="btn btn-danger">Disable 2FA</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="message-container"></div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
