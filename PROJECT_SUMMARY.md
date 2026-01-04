@@ -7,7 +7,7 @@ Your Amateur Radio Log Server "LogShackBaby" has been successfully created with 
 ## 📋 What's Included
 
 ### Core Features ✅
-- ✅ Web-based log server for ADIF formatted operating logs
+- ✅ Web-based log server for ADIF 3.1.6 formatted operating logs
 - ✅ ADIF log upload and export functionality
 - ✅ User registration and authentication system
 - ✅ Multi-factor authentication (Google Authenticator, Authy, Microsoft Authenticator compatible)

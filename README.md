@@ -2,11 +2,12 @@
 
 **Amateur Radio Log Server** - A web-based ADIF log management system for amateur radio operators.
 
-LogShackBaby provides a secure, containerized solution for uploading, storing, and managing amateur radio QSO logs in ADIF format with multi-factor authentication and API support.
+LogShackBaby provides a secure, containerized solution for uploading, storing, and managing amateur radio QSO logs in ADIF 3.1.6 format with multi-factor authentication and API support.
 
 ## Features
 
 ### Core Functionality
+- ✅ **ADIF 3.1.6 Support** - Full compliance with ADIF 3.1.6 specification
 - ✅ **ADIF Log Upload** - Parse and store amateur radio logs in ADIF format
 - ✅ **ADIF Log Export** - Download logs in standard ADIF format
 - ✅ **Automatic Deduplication** - Prevent duplicate QSO entries
