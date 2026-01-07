@@ -803,12 +803,12 @@ def admin_delete_user(user_id):
     }), 200
 
 
-# Routes - Contest Admin
-@app.route('/api/contestadmin/users', methods=['GET'])
+# Routes - Log Admin
+@app.route('/api/logadmin/users', methods=['GET'])
 @require_auth
-@require_role('contestadmin')
-def contestadmin_list_users():
-    """List all users with log info (contestadmin only)"""
+@require_role('logadmin')
+def logadmin_list_users():
+    """List all users with log info (logadmin only)"""
     users = User.query.all()
     return jsonify({
         'users': [{
@@ -820,11 +820,11 @@ def contestadmin_list_users():
     }), 200
 
 
-@app.route('/api/contestadmin/users/<int:user_id>/logs', methods=['GET'])
+@app.route('/api/logadmin/users/<int:user_id>/logs', methods=['GET'])
 @require_auth
-@require_role('contestadmin')
-def contestadmin_get_user_logs(user_id):
-    """Get logs for a specific user (contestadmin only - read only)"""
+@require_role('logadmin')
+def logadmin_get_user_logs(user_id):
+    """Get logs for a specific user (logadmin only - read only)"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -864,10 +864,10 @@ def contestadmin_get_user_logs(user_id):
     }), 200
 
 
-@app.route('/api/contestadmin/available-fields', methods=['GET'])
+@app.route('/api/logadmin/available-fields', methods=['GET'])
 @require_auth
-@require_role('contestadmin')
-def contestadmin_available_fields():
+@require_role('logadmin')
+def logadmin_available_fields():
     """Get all ADIF 3.1.6 fields and indicate which have data"""
     from adif_parser import ADIFParser
     
@@ -890,10 +890,10 @@ def contestadmin_available_fields():
     }), 200
 
 
-@app.route('/api/contestadmin/report', methods=['POST'])
+@app.route('/api/logadmin/report', methods=['POST'])
 @require_auth
-@require_role('contestadmin')
-def contestadmin_generate_report():
+@require_role('logadmin')
+def logadmin_generate_report():
     """Generate a custom report from all user logs"""
     data = request.get_json()
     
@@ -960,87 +960,6 @@ def contestadmin_generate_report():
         'report': report_data,
         'total': len(report_data),
         'fields': fields
-    }), 200
-
-
-# Routes - Log Admin
-@app.route('/api/logadmin/users', methods=['GET'])
-@require_auth
-@require_role('logadmin')
-def logadmin_list_users():
-    """List all users with log info (logadmin only)"""
-    users = User.query.all()
-    return jsonify({
-        'users': [{
-            'id': u.id,
-            'callsign': u.callsign,
-            'log_count': len(u.log_entries),
-            'created_at': u.created_at.isoformat()
-        } for u in users]
-    }), 200
-
-
-@app.route('/api/logadmin/users/<int:user_id>/logs', methods=['GET'])
-@require_auth
-@require_role('logadmin')
-def logadmin_get_user_logs(user_id):
-    """Get logs for a specific user (logadmin only)"""
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 50, type=int)
-    
-    # Get logs
-    pagination = LogEntry.query.filter_by(user_id=user_id).order_by(
-        LogEntry.qso_date.desc(), 
-        LogEntry.time_on.desc()
-    ).paginate(page=page, per_page=per_page, error_out=False)
-    
-    logs = [{
-        'id': log.id,
-        'qso_date': log.qso_date,
-        'time_on': log.time_on,
-        'call': log.call,
-        'band': log.band,
-        'mode': log.mode,
-        'freq': log.freq,
-        'rst_sent': log.rst_sent,
-        'rst_rcvd': log.rst_rcvd,
-        'station_callsign': log.station_callsign,
-        'comment': log.comment
-    } for log in pagination.items]
-    
-    return jsonify({
-        'user': {
-            'id': user.id,
-            'callsign': user.callsign
-        },
-        'logs': logs,
-        'total': pagination.total,
-        'pages': pagination.pages,
-        'current_page': pagination.page
-    }), 200
-
-
-@app.route('/api/logadmin/users/<int:user_id>/logs', methods=['DELETE'])
-@require_auth
-@require_role('logadmin')
-def logadmin_reset_user_logs(user_id):
-    """Reset (delete all) logs for a specific user (logadmin only)"""
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-    
-    log_count = len(user.log_entries)
-    
-    # Delete all logs for this user
-    LogEntry.query.filter_by(user_id=user_id).delete()
-    db.session.commit()
-    
-    return jsonify({
-        'message': f'Reset complete: {log_count} log entries deleted for {user.callsign}'
     }), 200
 
 

@@ -47,6 +47,27 @@ services:
         gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app
       "
 
+  # Contest Service
+  contest:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.contest
+    container_name: logshackbaby-contest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://logshackbaby:${DB_PASSWORD:-logshackbaby_password}@db:5432/logshackbaby
+      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
+      FLASK_ENV: production
+    volumes:
+      - ./backend:/app
+    networks:
+      - logshackbaby-network
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5001:5001"
+
   # NGINX Reverse Proxy (optional - for local testing)
   # In production, use your existing NGINX container
   nginx:
@@ -63,6 +84,7 @@ services:
       - logshackbaby-network
     depends_on:
       - app
+      - contest
 
 networks:
   logshackbaby-network:

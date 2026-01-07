@@ -123,3 +123,60 @@ class UploadLog(db.Model):
     
     def __repr__(self):
         return f'<UploadLog {self.filename} - {self.status}>'
+
+
+class Contest(db.Model):
+    __tablename__ = 'contests'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False)
+    
+    # Contest rules (stored as JSON)
+    rules = db.Column(db.JSON, nullable=True)
+    # Example rules: {"bands": ["20M", "40M"], "modes": ["SSB", "CW"], "min_qsos": 10}
+    
+    # Scoring configuration (stored as JSON)
+    scoring = db.Column(db.JSON, nullable=True)
+    # Example scoring: {"qso_points": 1, "band_multiplier": {"20M": 2, "40M": 1}, "mode_bonus": {"CW": 2}}
+    
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    entries = db.relationship('ContestEntry', backref='contest', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Contest {self.name}>'
+
+
+class ContestEntry(db.Model):
+    __tablename__ = 'contest_entries'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    contest_id = db.Column(db.Integer, db.ForeignKey('contests.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    log_entry_id = db.Column(db.Integer, db.ForeignKey('log_entries.id'), nullable=False)
+    
+    # Scoring
+    points = db.Column(db.Float, default=0.0)
+    is_valid = db.Column(db.Boolean, default=True)
+    validation_notes = db.Column(db.Text, nullable=True)
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    log_entry = db.relationship('LogEntry', backref='contest_entries')
+    
+    # Unique constraint: each log entry can only be in a contest once
+    __table_args__ = (
+        db.UniqueConstraint('contest_id', 'log_entry_id', name='unique_log_per_contest'),
+    )
+    
+    def __repr__(self):
+        return f'<ContestEntry contest:{self.contest_id} user:{self.user_id}>'

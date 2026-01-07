@@ -74,35 +74,35 @@ function setupEventListeners() {
     document.getElementById('cancel-create-user')?.addEventListener('click', hideCreateUserForm);
     document.getElementById('admin-create-user-form')?.addEventListener('submit', handleAdminCreateUser);
     
-    // Contest Admin Report
+    // Log Admin Report
     document.getElementById('generate-report-btn')?.addEventListener('click', generateReport);
     document.getElementById('export-csv-btn')?.addEventListener('click', exportReportToCSV);
     
     // Subtab navigation - using event delegation
     document.addEventListener('click', (e) => {
         if (e.target.matches('.subtab')) {
-            switchContestAdminSubtab(e.target.dataset.subtab);
+            switchLogAdminSubtab(e.target.dataset.subtab);
         }
     });
 }
 
-function switchContestAdminSubtab(subtabName) {
+function switchLogAdminSubtab(subtabName) {
     // Update subtab buttons
-    document.querySelectorAll('#contestadmin-tab .subtab').forEach(tab => {
+    document.querySelectorAll('#logadmin-tab .subtab').forEach(tab => {
         tab.classList.remove('active');
     });
-    document.querySelector(`#contestadmin-tab [data-subtab="${subtabName}"]`).classList.add('active');
+    document.querySelector(`#logadmin-tab [data-subtab="${subtabName}"]`).classList.add('active');
     
     // Update subtab content
-    document.querySelectorAll('#contestadmin-tab .subtab-content').forEach(content => {
+    document.querySelectorAll('#logadmin-tab .subtab-content').forEach(content => {
         content.classList.remove('active');
     });
     document.getElementById(subtabName).classList.add('active');
     
     // Load data if needed
-    if (subtabName === 'contestadmin-users') {
-        loadContestAdminUsers();
-    } else if (subtabName === 'contestadmin-report') {
+    if (subtabName === 'logadmin-users') {
+        loadLogAdminUsers();
+    } else if (subtabName === 'logadmin-report') {
         loadAdditionalFields();
     }
 }
@@ -112,7 +112,7 @@ async function loadAdditionalFields() {
     const grid = document.getElementById('additional-fields-grid');
     
     try {
-        const response = await apiCall('/contestadmin/available-fields');
+        const response = await apiCall('/logadmin/available-fields');
         const data = await response.json();
         
         console.log('Additional fields response:', data);
@@ -191,9 +191,6 @@ function switchTab(tabName) {
             break;
         case 'settings':
             loadSettings();
-            break;
-        case 'contestadmin':
-            loadContestAdminUsers();
             break;
         case 'logadmin':
             loadLogAdminUsers();
@@ -368,20 +365,26 @@ async function handleLogout() {
 async function loadDashboard() {
     showScreen('dashboard');
     
-    // Hide admin tabs by default
-    document.getElementById('contestadmin-tab-btn').classList.add('hidden');
+    // Hide admin tabs and contest links by default
+    document.getElementById('contests-link-btn').classList.add('hidden');
+    document.getElementById('contest-admin-link-btn').classList.add('hidden');
     document.getElementById('logadmin-tab-btn').classList.add('hidden');
     document.getElementById('sysop-tab-btn').classList.add('hidden');
     
-    // Show admin tabs based on role (exclusive - only show tab for exact role)
+    // Show contest links for all authenticated users
+    document.getElementById('contests-link-btn').classList.remove('hidden');
+    
+    // Show admin tabs and links based on role hierarchy
     const userRole = localStorage.getItem('userRole') || 'user';
     if (userRole === 'contestadmin') {
-        document.getElementById('contestadmin-tab-btn').classList.remove('hidden');
+        document.getElementById('contest-admin-link-btn').classList.remove('hidden');
     }
     if (userRole === 'logadmin') {
         document.getElementById('logadmin-tab-btn').classList.remove('hidden');
     }
     if (userRole === 'sysop') {
+        document.getElementById('contest-admin-link-btn').classList.remove('hidden');
+        document.getElementById('logadmin-tab-btn').classList.remove('hidden');
         document.getElementById('sysop-tab-btn').classList.remove('hidden');
     }
     
@@ -875,22 +878,22 @@ function formatDateTime(isoStr) {
     return date.toLocaleString();
 }
 
-// Admin Functions - Contest Admin
-async function loadContestAdminUsers() {
+// Admin Functions - Log Admin
+async function loadLogAdminUsers() {
     try {
-        const response = await apiCall('/contestadmin/users');
+        const response = await apiCall('/logadmin/users');
         const data = await response.json();
         
         if (response.ok) {
-            displayContestAdminUsers(data.users);
+            displayLogAdminUsers(data.users);
         }
     } catch (error) {
         showMessage('Failed to load users', 'error');
     }
 }
 
-function displayContestAdminUsers(users) {
-    const container = document.getElementById('contestadmin-users-list');
+function displayLogAdminUsers(users) {
+    const container = document.getElementById('logadmin-users-list');
     
     if (users.length === 0) {
         container.innerHTML = '<p>No users found</p>';
@@ -914,7 +917,7 @@ function displayContestAdminUsers(users) {
                         <td>${u.log_count}</td>
                         <td>${formatDateTime(u.created_at)}</td>
                         <td>
-                            <button class="btn btn-sm" onclick="viewContestUserLogs(${u.id}, '${u.callsign}')">View Logs</button>
+                            <button class="btn btn-sm" onclick="viewLogAdminUserLogs(${u.id}, '${u.callsign}')">View Logs</button>
                         </td>
                     </tr>
                 `).join('')}
@@ -925,9 +928,9 @@ function displayContestAdminUsers(users) {
     container.innerHTML = html;
 }
 
-async function viewContestUserLogs(userId, callsign) {
+async function viewLogAdminUserLogs(userId, callsign) {
     try {
-        const response = await apiCall(`/contestadmin/users/${userId}/logs?page=1&per_page=100`);
+        const response = await apiCall(`/logadmin/users/${userId}/logs?page=1&per_page=100`);
         const data = await response.json();
         
         if (response.ok) {
@@ -1001,7 +1004,7 @@ async function generateReport() {
     if (modesInput) filters.modes = modesInput.split(',').map(m => m.trim());
     
     try {
-        const response = await apiCall('/contestadmin/report', {
+        const response = await apiCall('/logadmin/report', {
             method: 'POST',
             body: JSON.stringify({ fields, filters })
         });

@@ -17,6 +17,14 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 - ✅ **Statistics Dashboard** - View QSO counts, bands, modes, and more
 - ✅ **Additional Fields Display** - View all extra ADIF fields captured in logs
 
+### Gamification & Contests
+- 🏆 **Contest Management** - Create and manage ham radio contests
+- 🏆 **Leaderboards** - Real-time rankings with medals for top performers
+- 🏆 **Flexible Scoring** - Configure points, band multipliers, and mode bonuses
+- 🏆 **Auto-Population** - Automatically scan logs for eligible contest QSOs
+- 🏆 **Detailed Stats** - View individual contest entries and QSO breakdowns
+- 🏆 **Role-Based Access** - Contest admins manage, users view leaderboards
+
 ### Security
 - 🔐 **User Registration & Authentication** - Secure account management
 - 🔐 **Role-Based Access Control** - Four user roles: user, contestadmin, logadmin, sysop
@@ -27,6 +35,7 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Architecture
 - 🐳 **Containerized** - Docker-based deployment
+- 🐳 **Microservices** - Separate contest service for scalability
 - 🐍 **Python Backend** - Flask web framework with SQLAlchemy ORM
 - 🗄️ **PostgreSQL Database** - Reliable data storage with persistent volumes
 - 🌐 **JavaScript Frontend** - Client-side rendering, no frameworks required
@@ -513,16 +522,25 @@ For issues or questions:
 2. Review application logs
 3. Verify configuration files
 
+## Additional Documentation
+
+- **[GAMIFICATION.md](GAMIFICATION.md)** - Complete guide to contest management and leaderboards
+- **[CONTEST_QUICKSTART.md](CONTEST_QUICKSTART.md)** - Quick start guide for setting up contests
+- **[API_EXAMPLES.md](API_EXAMPLES.md)** - API usage examples
+- **[TESTING.md](TESTING.md)** - Testing procedures
+
 ## Contributing
 
 Contributions welcome! Consider adding:
 - Additional ADIF field support
 - Log export functionality
-- Contest log analysis
+- Real-time contest updates
 - DXCC tracking
 - Award tracking (WAS, WAC, etc.)
 - Logbook of the World (LoTW) integration
 - QRZ/HamDB lookup integration
+- Contest templates and presets
+- Achievement badges and milestones
 
 ## Amateur Radio Resources
 

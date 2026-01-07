@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contest Management - LogShackBaby</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .contest-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .contest-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        .contest-card h3 {
+            margin-top: 0;
+        }
+        .contest-dates {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .contest-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .status-active {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-inactive {
+            background: #999;
+            color: white;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-secondary {
+            background: #999;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Contest Management</h1>
+            <div class="user-info">
+                <span id="userCallsign"></span>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="contest.html" class="active">Manage Contests</a>
+            <a href="leaderboard.html">Leaderboards</a>
+        </nav>
+
+        <main>
+            <div id="accessDenied" style="display: none;">
+                <h2>Access Denied</h2>
+                <p>You need contestadmin role to manage contests.</p>
+                <a href="leaderboard.html" class="btn btn-primary">View Leaderboards</a>
+            </div>
+
+            <div id="contestManagement">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2>Your Contests</h2>
+                    <button onclick="showCreateModal()" class="btn btn-primary">Create New Contest</button>
+                </div>
+
+                <div id="contestList" class="contest-grid">
+                    <p>Loading contests...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create/Edit Contest Modal -->
+    <div id="contestModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Create New Contest</h2>
+            <form id="contestForm">
+                <input type="hidden" id="contestId">
+                
+                <div class="form-group">
+                    <label for="contestName">Contest Name *</label>
+                    <input type="text" id="contestName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contestDescription">Description</label>
+                    <textarea id="contestDescription"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="startDate">Start Date *</label>
+                    <input type="datetime-local" id="startDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="endDate">End Date *</label>
+                    <input type="datetime-local" id="endDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="qsoPoints">Base QSO Points</label>
+                    <input type="number" id="qsoPoints" value="1" min="0" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="isActive">Status</label>
+                    <select id="isActive">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">Save Contest</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/contest.js"></script>
+</body>
+</html>

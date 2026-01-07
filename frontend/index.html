@@ -110,7 +110,8 @@
                         <button class="tab" data-tab="upload">Upload</button>
                         <button class="tab" data-tab="api-keys">API Keys</button>
                         <button class="tab" data-tab="settings">Settings</button>
-                        <button class="tab hidden" id="contestadmin-tab-btn" data-tab="contestadmin">Contest Admin</button>
+                        <button class="tab hidden" id="contests-link-btn" onclick="window.location.href='leaderboard.html'">Leaderboards</button>
+                        <button class="tab hidden" id="contest-admin-link-btn" onclick="window.location.href='contest.html'">Contest Management</button>
                         <button class="tab hidden" id="logadmin-tab-btn" data-tab="logadmin">Log Admin</button>
                         <button class="tab hidden" id="sysop-tab-btn" data-tab="sysop">System Admin</button>
                     </div>
@@ -296,21 +297,21 @@
                         </div>
                     </div>
 
-                    <!-- Contest Admin Tab -->
-                    <div id="contestadmin-tab" class="tab-content">
-                        <h2>Contest Administration</h2>
+                    <!-- Log Admin Tab -->
+                    <div id="logadmin-tab" class="tab-content">
+                        <h2>Log Administration</h2>
                         
                         <div class="subtabs">
-                            <button class="subtab active" data-subtab="contestadmin-users">Users</button>
-                            <button class="subtab" data-subtab="contestadmin-report">Report Generator</button>
+                            <button class="subtab active" data-subtab="logadmin-users">Users</button>
+                            <button class="subtab" data-subtab="logadmin-report">Report Generator</button>
                         </div>
 
-                        <div id="contestadmin-users" class="subtab-content active">
+                        <div id="logadmin-users" class="subtab-content active">
                             <p>View user logs (read-only)</p>
-                            <div id="contestadmin-users-list"></div>
+                            <div id="logadmin-users-list"></div>
                         </div>
 
-                        <div id="contestadmin-report" class="subtab-content">
+                        <div id="logadmin-report" class="subtab-content">
                             <h3>Generate Custom Report</h3>
                             
                             <div class="report-config">
@@ -370,14 +371,6 @@
                                 <div id="report-table-container"></div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Log Admin Tab -->
-                    <div id="logadmin-tab" class="tab-content">
-                        <h2>Log Administration</h2>
-                        <p>View and manage user logs</p>
-
-                        <div id="logadmin-users-list"></div>
                     </div>
 
                     <!-- System Admin Tab -->

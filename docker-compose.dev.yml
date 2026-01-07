@@ -18,6 +18,19 @@ services:
     ports:
       - "5000:5000"
 
+  contest:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.contest
+    volumes:
+      - ./backend:/app
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+    command: python contest_service.py
+    ports:
+      - "5001:5001"
+
   db:
     ports:
       - "5432:5432"  # Expose database port for development tools
