@@ -25,7 +25,7 @@ fi
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
     # Docker Compose
-    sudo pip3 install docker-compose
+    sudo apt-get install docker-compose-plugin
     docker-compose version
 fi
 
