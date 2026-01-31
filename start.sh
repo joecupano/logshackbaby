@@ -26,7 +26,7 @@ fi
 if ! command -v docker-compose &> /dev/null; then
     # Docker Compose
     sudo apt install python3-pip -y
-    sudo pip3 install docker-compose
+    sudo pipx install docker-compose
     docker-compose version
 fi
 
