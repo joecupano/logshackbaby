@@ -11,7 +11,7 @@ echo "========================================="
 echo ""
 
 # Dependencies
-sudo apt-get install python3-full python3-pip python3-pipx -y
+sudo apt-get install python3-full python3-pip -y
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
