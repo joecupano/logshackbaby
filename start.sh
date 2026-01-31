@@ -12,13 +12,12 @@ echo ""
 
 # Dependencies
 sudo apt-get install python3-full python3-pip -y
-python3 -m pip install pipx
+sudo python3 -m pip install pipx
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     mkdir docker && cd docker
     curl -fsSL https://get.docker.com |sh
-    sudo bash get-docker.sh
     # Set SUDO user to use docker
     sudo usermod -aG docker $(whoami)
 fi
@@ -26,7 +25,7 @@ fi
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
     # Docker Compose
-    sudo pipx install docker-compose
+    sudo pip3 install docker-compose
     docker-compose version
 fi
 
