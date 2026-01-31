@@ -19,11 +19,6 @@ if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com |sh
     # Set SUDO user to use docker
     sudo usermod -aG docker $(whoami)
-fi
-
-# Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    # Docker Compose
     sudo apt-get install docker-compose-plugin
     docker-compose version
 fi
