@@ -10,6 +10,9 @@ echo "  LogShackBaby - Amateur Radio Log Server"
 echo "========================================="
 echo ""
 
+# Dependencies
+sudo apt-get install python3-full python3-pip python3-pipx -y
+
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     mkdir docker && cd docker
