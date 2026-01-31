@@ -52,14 +52,14 @@ echo "🚀 Starting LogShackBaby containers..."
 echo ""
 
 # Start containers
-docker-compose up -d
+docker compose up -d
 
 echo ""
 echo "⏳ Waiting for services to start..."
 sleep 10
 
 # Check if containers are running
-if [ "$(docker-compose ps -q | wc -l)" -eq 0 ]; then
+if [ "$(docker compose ps -q | wc -l)" -eq 0 ]; then
     echo "❌ Containers failed to start. Check logs with: docker-compose logs"
     exit 1
 fi
@@ -73,10 +73,10 @@ echo "📍 Access the application:"
 echo "   http://localhost"
 echo ""
 echo "📊 View logs:"
-echo "   docker-compose logs -f"
+echo "   docker compose logs -f"
 echo ""
 echo "🛑 Stop the application:"
-echo "   docker-compose down"
+echo "   docker compose down"
 echo ""
 echo "📖 Read the full documentation:"
 echo "   cat README.md"
