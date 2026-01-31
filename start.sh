@@ -26,7 +26,6 @@ fi
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
     # Docker Compose
-    sudo apt install python3-pip -y
     sudo pipx install docker-compose
     docker-compose version
 fi
