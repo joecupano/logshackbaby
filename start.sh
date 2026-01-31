@@ -12,16 +12,19 @@ echo ""
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first."
-    echo "Visit: https://docs.docker.com/get-docker/"
-    exit 1
+    mkdir docker && cd docker
+    curl -fsSL https://get.docker.com |sh
+    sudo bash get-docker.sh
+    # Set SUDO user to use docker
+    sudo usermod -aG docker $(whoami)
 fi
 
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
-    echo "Visit: https://docs.docker.com/compose/install/"
-    exit 1
+    # Docker Compose
+    sudo apt install python3-pip -y
+    sudo pip3 install docker-compose
+    docker-compose version
 fi
 
 echo "✅ Docker and Docker Compose are installed"
