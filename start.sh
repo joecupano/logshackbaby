@@ -12,6 +12,7 @@ echo ""
 
 # Dependencies
 sudo apt-get install python3-full python3-pip -y
+python3 -m pip install pipx
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
