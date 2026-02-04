@@ -77,9 +77,9 @@ case $OS in
         print_error "Unsupported OS: $OS"
         exit 1
         ;;
-    esac
-    PYTHON_CMD="python3"
-    print_success "Python 3 verified successfully"
+esac
+PYTHON_CMD="python3"
+print_success "Python 3 verified successfully"
 
 # Check for pip
 if ! $PYTHON_CMD -m pip --version &> /dev/null; then
