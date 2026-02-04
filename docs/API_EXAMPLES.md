@@ -1,35 +1,47 @@
 # API Usage Examples
 
+These examples work with both Docker and Local deployments. Use the appropriate base URL:
+- **Docker (via NGINX)**: `http://localhost/api/`
+- **Docker (direct) or Local**: `http://localhost:5000/api/`
+
+Replace `localhost` with your server's IP or domain name for remote access.
+
 ## cURL Examples
 
 ### Upload a log file
 ```bash
+# Docker (via NGINX)
 curl -X POST http://localhost/api/logs/upload \
+  -H "X-API-Key: YOUR_API_KEY_HERE" \
+  -F "file=@/path/to/your/logfile.adi"
+
+# Local or Docker (direct)
+curl -X POST http://localhost:5000/api/logs/upload \
   -H "X-API-Key: YOUR_API_KEY_HERE" \
   -F "file=@/path/to/your/logfile.adi"
 ```
 
 ### Get your log statistics
 ```bash
-curl -X GET http://localhost/api/logs/stats \
+curl -X GET http://localhost:5000/api/logs/stats \
   -H "X-Session-Token: YOUR_SESSION_TOKEN"
 ```
 
 ### Search logs by callsign
 ```bash
-curl -X GET "http://localhost/api/logs?callsign=W1ABC&page=1&per_page=50" \
+curl -X GET "http://localhost:5000/api/logs?callsign=W1ABC&page=1&per_page=50" \
   -H "X-Session-Token: YOUR_SESSION_TOKEN"
 ```
 
 ### Export logs to ADIF file
 ```bash
 # Export all logs
-curl -X GET "http://localhost/api/logs/export" \
+curl -X GET "http://localhost:5000/api/logs/export" \
   -H "X-Session-Token: YOUR_SESSION_TOKEN" \
   --output my_logbook.adi
 
 # Export filtered logs (20m SSB only)
-curl -X GET "http://localhost/api/logs/export?band=20m&mode=SSB" \
+curl -X GET "http://localhost:5000/api/logs/export?band=20m&mode=SSB" \
   -H "X-Session-Token: YOUR_SESSION_TOKEN" \
   --output 20m_ssb.adi
 ```
@@ -40,9 +52,13 @@ curl -X GET "http://localhost/api/logs/export?band=20m&mode=SSB" \
 ```python
 import requests
 
+# Base URL - adjust based on deployment
+BASE_URL = "http://localhost:5000/api"  # Local or Docker direct
+# BASE_URL = "http://localhost/api"  # Docker via NGINX
+
 def upload_adif_log(api_key, file_path):
     """Upload an ADIF log file to LogShackBaby"""
-    url = "http://localhost/api/logs/upload"
+    url = f"{BASE_URL}/logs/upload"
     headers = {"X-API-Key": api_key}
     
     with open(file_path, 'rb') as f:
@@ -67,9 +83,11 @@ upload_adif_log(api_key, "my_log.adi")
 ```python
 import requests
 
+BASE_URL = "http://localhost:5000/api"
+
 def get_log_stats(session_token):
     """Get statistics about your logs"""
-    url = "http://localhost/api/logs/stats"
+    url = f"{BASE_URL}/logs/stats"
     headers = {"X-Session-Token": session_token}
     
     response = requests.get(url, headers=headers)
@@ -93,9 +111,11 @@ get_log_stats(session_token)
 import requests
 import json
 
+BASE_URL = "http://localhost:5000/api"
+
 def get_logs_with_details(session_token, page=1, per_page=10):
     """Get logs including all additional ADIF fields"""
-    url = f"http://localhost/api/logs?page={page}&per_page={per_page}"
+    url = f"{BASE_URL}/logs?page={page}&per_page={per_page}"
     headers = {"X-Session-Token": session_token}
     
     response = requests.get(url, headers=headers)

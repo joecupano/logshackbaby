@@ -7,21 +7,31 @@ Welcome to the LogShackBaby documentation! This index will help you find what yo
 **New to LogShackBaby? Start here:**
 
 1. **[OVERVIEW.md](OVERVIEW.md)** - Project overview and statistics
-2. **[README.md](README.md)** - Complete setup guide and user documentation
-3. **[start.sh](start.sh)** - Quick start script (run this!)
+2. **[README.md](../README.md)** - Complete setup guide and user documentation
+3. Choose your deployment method:
+   - **Docker**: Run `./install-docker.sh` then `./start-docker.sh`
+   - **Local**: Run `./install-local.sh` then `./start-local.sh`
 
 ## 📖 Documentation Files
 
 ### Setup & Installation
-- **[README.md](README.md)** - Main documentation
+- **[README.md](../README.md)** - Main documentation
   - Features overview
-  - Installation instructions
+  - Installation instructions (Docker & Local)
   - Configuration guide
   - User guide
   - Maintenance procedures
 
+- **Installation Scripts**
+  - `install-docker.sh` - Automated Docker installation
+  - `start-docker.sh` - Start Docker containers
+  - `stop-docker.sh` - Stop Docker containers
+  - `install-local.sh` - Automated local installation (no Docker)
+  - `start-local.sh` - Start local application
+  - `stop-local.sh` - Stop local application
+
 - **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - Production deployment
-  - Pre-deployment requirements
+  - Pre-deployment requirements (Docker & Local)
   - Security hardening
   - Step-by-step deployment
   - Monitoring setup

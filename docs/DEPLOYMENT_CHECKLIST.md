@@ -2,15 +2,27 @@
 
 Use this checklist to ensure proper deployment of LogShackBaby.
 
+LogShackBaby supports two deployment methods:
+- **Docker Deployment** (containerized, recommended for production)
+- **Local Deployment** (native installation, no Docker)
+
 ## Pre-Deployment
 
-### Server Requirements
+### Server Requirements (Docker Deployment)
 - [ ] Docker 20.10+ installed
 - [ ] Docker Compose 2.0+ installed
 - [ ] Minimum 2GB RAM available
 - [ ] Minimum 10GB disk space available
 - [ ] Ports 80, 443, 5000 available (or alternative ports configured)
 - [ ] Root/sudo access for Docker
+
+### Server Requirements (Local Deployment)
+- [ ] Python 3.8+ installed
+- [ ] PostgreSQL 12+ installed
+- [ ] Minimum 2GB RAM available
+- [ ] Minimum 10GB disk space available
+- [ ] Port 5000 available (or alternative port configured)
+- [ ] Root/sudo access for PostgreSQL setup
 
 ### Network Requirements
 - [ ] Static IP address or domain name configured
@@ -57,7 +69,9 @@ Use this checklist to ensure proper deployment of LogShackBaby.
 
 ## Deployment Steps
 
-### 1. Initial Deployment
+### Docker Deployment
+
+#### 1. Initial Deployment
 - [ ] Clone/copy LogShackBaby to server:
   ```bash
   cd /opt
@@ -65,23 +79,55 @@ Use this checklist to ensure proper deployment of LogShackBaby.
   cd logshackbaby
   ```
 
-### 2. Configure Environment
-- [ ] Create `.env` file with secure values
-- [ ] Verify all required files are present:
+#### 2. Run Installation Script
+- [ ] Execute Docker installation:
   ```bash
-  ls -la backend/ frontend/ database/ nginx/
+  ./install-docker.sh
   ```
+- [ ] Verify installation completed successfully
 
-### 3. Start Services
+#### 3. Start Services
 - [ ] Start containers:
   ```bash
-  docker-compose up -d
+  ./start-docker.sh
   ```
 - [ ] Check container status:
   ```bash
   docker-compose ps
   ```
 - [ ] Verify all containers are "Up" and healthy
+
+### Local Deployment (No Docker)
+
+#### 1. Initial Deployment
+- [ ] Clone/copy LogShackBaby to server:
+  ```bash
+  cd /opt
+  git clone <repo> logshackbaby  # or copy files
+  cd logshackbaby
+  ```
+
+#### 2. Run Installation Script
+- [ ] Execute local installation:
+  ```bash
+  ./install-local.sh
+  ```
+- [ ] Choose whether to create systemd service
+- [ ] Verify installation completed successfully
+
+#### 3. Start Application
+- [ ] Start the application:
+  ```bash
+  ./start-local.sh
+  ```
+  OR if using systemd:
+  ```bash
+  sudo systemctl start logshackbaby
+  ```
+- [ ] Verify application is running:
+  ```bash
+  curl http://localhost:5000/api/health
+  ```
 
 ### 4. Verify Deployment
 - [ ] Check application logs:

@@ -39,11 +39,19 @@
 
 ---
 
-## 📁 Project Files (24 files)
+## 📁 Project Files
+
+### Installation & Management Scripts (6 files)
+1. **install-docker.sh** - Automated Docker installation script
+2. **start-docker.sh** - Start Docker containers
+3. **stop-docker.sh** - Stop Docker containers
+4. **install-local.sh** - Automated local installation (no Docker)
+5. **start-local.sh** - Start local application
+6. **stop-local.sh** - Stop local application
 
 ### Documentation (6 files)
 1. **README.md** - Complete user guide and documentation
-2. **PROJECT_SUMMARY.md** - This comprehensive overview
+2. **PROJECT_SUMMARY.md** - Comprehensive project overview
 3. **API_EXAMPLES.md** - API usage examples (Python, cURL, Bash)
 4. **TESTING.md** - Testing procedures and automated test scripts
 5. **DEPLOYMENT_CHECKLIST.md** - Production deployment guide

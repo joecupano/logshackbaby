@@ -41,18 +41,20 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Installation
 
-#### Option 1: Automated Local Installation (Recommended)
+LogShackBaby supports two deployment methods: **Docker** (containerized) and **Local** (native installation).
 
-The easiest way to get started is with the automated installation script:
+#### Option 1: Docker Deployment (Recommended for Production)
+
+Easiest setup with full isolation and portability:
 
 1. **Clone or extract the project**
    ```bash
    cd /home/pi/source/LogShackBaby
    ```
 
-2. **Run the installation script**
+2. **Run the Docker installation script**
    ```bash
-   ./install.sh
+   ./install-docker.sh
    ```
 
 The script will:
@@ -60,66 +62,25 @@ The script will:
 - Set up user permissions for Docker
 - Create `.env` file with secure random passwords
 - Build all Docker images
-- Start all services
-- Verify the installation
+- Create persistent volumes
 
-3. **Access the application**
-   - Open your browser to: `http://localhost`
+3. **Start the application**
+   ```bash
+   ./start-docker.sh
+   ```
+
+4. **Access the application**
+   - Open your browser to: `http://localhost` (NGINX)
+   - Or: `http://localhost:5000` (direct app access)
    - For SSL: Configure NGINX with your certificates (see NGINX Configuration)
 
-#### Option 2: Manual Installation
-
-If you prefer manual setup or need more control:
-
-1. **Clone or extract the project**
-   ```bash
-   cd /home/pi/source/LogShackBaby
-   ```
-
-2. **Configure environment**
-   ```bash
-   cp .env.example .env
-   nano .env  # Edit with your secure passwords
-   ```
-
-3. **Generate a secure secret key**
-   ```bash
-   python3 -c "import secrets; print(secrets.token_hex(32))"
-   # Add this to your .env file as SECRET_KEY
-   ```
-
-4. **Start the containers**
-   ```bash
-   docker-compose up -d
-   ```
-
-5. **Check the logs**
-   ```bash
-   docker-compose logs -f
-   ```
-
-6. **Access the application**
-   - Open your browser to: `http://localhost` (or your server IP)
-   - For SSL: Configure NGINX with your certificates (see NGINX Configuration)
-
-### Starting the Application
-
-After initial installation, use the startup script to start the application:
-
+**Docker Management:**
 ```bash
-./start-local.sh
-```
+# Start containers
+./start-docker.sh
 
-This script will:
-- Check that Docker is running
-- Start all containers
-- Verify the application is responding
-- Display access URLs and useful commands
-
-**Other useful commands:**
-```bash
-# Stop the application
-docker-compose down
+# Stop containers
+./stop-docker.sh
 
 # View logs
 docker-compose logs -f
@@ -129,6 +90,82 @@ docker-compose restart
 
 # Check status
 docker-compose ps
+```
+
+#### Option 2: Local Installation (Native - No Docker)
+
+Install and run directly on your system:
+
+1. **Clone or extract the project**
+   ```bash
+   cd /home/pi/source/LogShackBaby
+   ```
+
+2. **Run the local installation script**
+   ```bash
+   ./install-local.sh
+   ```
+
+The script will:
+- Check for and install Python 3, PostgreSQL, and dependencies
+- Create PostgreSQL database with secure random password
+- Set up Python virtual environment
+- Install all Python dependencies
+- Initialize database schema
+- Optionally create systemd service
+
+3. **Start the application**
+   ```bash
+   ./start-local.sh
+   ```
+
+4. **Access the application**
+   - Open your browser to: `http://localhost:5000`
+
+**Local Management:**
+```bash
+# Start application
+./start-local.sh
+
+# Stop application (Ctrl+C or in another terminal)
+./stop-local.sh
+
+# If using systemd service
+sudo systemctl start logshackbaby
+sudo systemctl stop logshackbaby
+sudo systemctl status logshackbaby
+sudo journalctl -u logshackbaby -f
+```
+
+#### Option 3: Manual Installation
+
+If you prefer complete manual control:
+
+**Docker:**
+```bash
+cp .env.example .env
+nano .env  # Edit with your secure passwords
+docker-compose build
+docker-compose up -d
+```
+
+**Local:**
+```bash
+# Install dependencies
+sudo apt-get install postgresql python3 python3-pip python3-venv
+
+# Create database
+sudo -u postgres createdb logshackbaby
+sudo -u postgres createuser logshackbaby
+
+# Set up Python environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r backend/requirements.txt
+
+# Configure and run
+cd backend
+python3 app.py
 ```
 
 ### First Time Setup

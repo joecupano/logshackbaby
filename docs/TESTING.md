@@ -2,24 +2,43 @@
 
 ## Prerequisites
 
-Before testing, ensure:
+Before testing, ensure you have one of the following setups:
+
+### Docker Deployment
 - Docker and Docker Compose are installed
 - Ports 80, 443, and 5000 are available
-- You have the sample_log.adi file
+- Application installed via `./install-docker.sh`
+
+### Local Deployment
+- Python 3.8+ and PostgreSQL installed
+- Port 5000 is available
+- Application installed via `./install-local.sh`
+
+You'll also need:
+- The sample_log.adi file
+- curl command-line tool
 
 ## Quick Test Procedure
 
 ### 1. Start the Application
 
+**Docker:**
 ```bash
-cd /home/joe/source/logshackbaby
-./start.sh
+cd /home/pi/source/LogShackBaby
+./start-docker.sh
 ```
 
-Wait for all containers to start (about 10-15 seconds).
+**Local:**
+```bash
+cd /home/pi/source/LogShackBaby
+./start-local.sh
+```
 
-### 2. Verify Containers are Running
+Wait for the application to start (about 10-15 seconds for Docker, 5 seconds for local).
 
+### 2. Verify Application is Running
+
+**Docker:**
 ```bash
 docker-compose ps
 ```
@@ -32,10 +51,21 @@ logshackbaby-db         "docker-entrypoint..."   Up (healthy)        5432/tcp
 logshackbaby-nginx      "/docker-entrypoint..."  Up                  0.0.0.0:80->80/tcp
 ```
 
+**Local:**
+```bash
+ps aux | grep gunicorn
+```
+
 ### 3. Test Health Endpoint
 
+**Docker (via NGINX):**
 ```bash
 curl http://localhost/api/health
+```
+
+**Docker (direct) or Local:**
+```bash
+curl http://localhost:5000/api/health
 ```
 
 Expected: `{"status":"healthy"}`

@@ -19,22 +19,41 @@ The database schema is automatically created by the Flask application on first s
 
 ## Backup and Restore
 
-### Backup
+### Docker Deployment
+
+**Backup:**
 ```bash
 docker exec logshackbaby-db pg_dump -U logshackbaby logshackbaby > backup.sql
 ```
 
-### Restore
+**Restore:**
 ```bash
 docker exec -i logshackbaby-db psql -U logshackbaby logshackbaby < backup.sql
 ```
 
-## Direct Database Access
-
+**Direct Database Access:**
 ```bash
 docker exec -it logshackbaby-db psql -U logshackbaby -d logshackbaby
 ```
 
-## Volume
+### Local Deployment
 
-Database data is stored in the Docker volume `postgres_data` for persistence.
+**Backup:**
+```bash
+sudo -u postgres pg_dump logshackbaby > backup.sql
+```
+
+**Restore:**
+```bash
+sudo -u postgres psql logshackbaby < backup.sql
+```
+
+**Direct Database Access:**
+```bash
+sudo -u postgres psql -d logshackbaby
+```
+
+## Storage
+
+- **Docker**: Database data is stored in the Docker volume `postgres_data` for persistence
+- **Local**: Database data is stored in PostgreSQL's default data directory (typically `/var/lib/postgresql/`)

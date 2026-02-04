@@ -22,7 +22,10 @@ Your Amateur Radio Log Server "LogShackBaby" has been successfully created with 
 - ✅ Docker containerization
 - ✅ NGINX reverse proxy support with SSL
 
-### Architecture
+### Deployment Options
+LogShackBaby supports two deployment methods:
+
+**Docker Deployment (Containerized)**
 ```
 ┌─────────────────┐
 │  NGINX Proxy    │  (Port 80/443, SSL)
@@ -43,6 +46,22 @@ Your Amateur Radio Log Server "LogShackBaby" has been successfully created with 
 │   PostgreSQL    │  (Port 5432, internal)
 │    Database     │
 │ (Persistent Vol)│
+└─────────────────┘
+```
+
+**Local Deployment (Native)**
+```
+┌─────────────────┐
+│   Flask App     │  (Port 5000)
+│  Python Backend │  Uses: venv, gunicorn
+│  + Frontend     │
+└────────┬────────┘
+         │
+         │ PostgreSQL Protocol
+         ▼
+┌─────────────────┐
+│   PostgreSQL    │  (Port 5432, localhost)
+│    Database     │  Native installation
 └─────────────────┘
 ```
 
