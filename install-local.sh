@@ -64,32 +64,22 @@ fi
 
 print_info "Detected OS: $OS"
 
-# Check for Python 3
-PYTHON_CMD=""
-if command -v python3 &> /dev/null; then
-    PYTHON_CMD="python3"
-    PYTHON_VERSION=$(python3 --version | awk '{print $2}')
-    print_success "Python 3 is installed (version $PYTHON_VERSION)"
-else
-    print_error "Python 3 is not installed"
-    print_info "Installing Python 3..."
-    
-    case $OS in
-        ubuntu|debian|raspbian)
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv python3-dev
-            ;;
-        fedora|centos|rhel)
-            sudo dnf install -y python3 python3-pip python3-devel
-            ;;
-        *)
-            print_error "Unsupported OS: $OS"
-            exit 1
-            ;;
+# Verify Python 3 full installed
+case $OS in
+    ubuntu|debian|raspbian)
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip python3-venv python3-dev
+        ;;
+    fedora|centos|rhel)
+        sudo dnf install -y python3 python3-pip python3-devel
+        ;;
+    *)
+        print_error "Unsupported OS: $OS"
+        exit 1
+        ;;
     esac
     PYTHON_CMD="python3"
-    print_success "Python 3 installed successfully"
-fi
+    print_success "Python 3 verified successfully"
 
 # Check for pip
 if ! $PYTHON_CMD -m pip --version &> /dev/null; then
