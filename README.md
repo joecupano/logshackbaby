@@ -41,9 +41,39 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ### Installation
 
+#### Option 1: Automated Local Installation (Recommended)
+
+The easiest way to get started is with the automated installation script:
+
 1. **Clone or extract the project**
    ```bash
-   cd /home/joe/source/logshackbaby
+   cd /home/pi/source/LogShackBaby
+   ```
+
+2. **Run the installation script**
+   ```bash
+   ./install.sh
+   ```
+
+The script will:
+- Check for and install Docker if needed
+- Set up user permissions for Docker
+- Create `.env` file with secure random passwords
+- Build all Docker images
+- Start all services
+- Verify the installation
+
+3. **Access the application**
+   - Open your browser to: `http://localhost`
+   - For SSL: Configure NGINX with your certificates (see NGINX Configuration)
+
+#### Option 2: Manual Installation
+
+If you prefer manual setup or need more control:
+
+1. **Clone or extract the project**
+   ```bash
+   cd /home/pi/source/LogShackBaby
    ```
 
 2. **Configure environment**
@@ -71,6 +101,35 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 6. **Access the application**
    - Open your browser to: `http://localhost` (or your server IP)
    - For SSL: Configure NGINX with your certificates (see NGINX Configuration)
+
+### Starting the Application
+
+After initial installation, use the startup script to start the application:
+
+```bash
+./start-local.sh
+```
+
+This script will:
+- Check that Docker is running
+- Start all containers
+- Verify the application is responding
+- Display access URLs and useful commands
+
+**Other useful commands:**
+```bash
+# Stop the application
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# Restart services
+docker-compose restart
+
+# Check status
+docker-compose ps
+```
 
 ### First Time Setup
 
