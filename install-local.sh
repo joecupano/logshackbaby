@@ -204,6 +204,9 @@ cat > backend/.env << EOF
 # Auto-generated on $(date)
 
 # Database configuration
+DB_USER=$DB_USER
+DB_PASSWORD=$DB_PASSWORD
+DB_NAME=$DB_NAME
 DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@localhost:5432/$DB_NAME
 
 # Flask secret key
