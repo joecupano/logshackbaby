@@ -980,6 +980,11 @@ def contestadmin_create_template():
     
     description = data.get('description', '')
     filters = data.get('filters', {})
+    shared_with_role = data.get('shared_with_role')  # Optional: 'contestadmin', 'logadmin', etc.
+    
+    # Validate shared_with_role if provided
+    if shared_with_role and shared_with_role not in ['contestadmin', 'logadmin', 'sysop']:
+        return jsonify({'error': 'Invalid role for sharing'}), 400
     
     # Create template
     template = ReportTemplate(
@@ -987,7 +992,8 @@ def contestadmin_create_template():
         name=name.strip(),
         description=description.strip() if description else None,
         fields=fields,
-        filters=filters
+        filters=filters,
+        shared_with_role=shared_with_role
     )
     
     db.session.add(template)
@@ -1001,6 +1007,7 @@ def contestadmin_create_template():
             'description': template.description,
             'fields': template.fields,
             'filters': template.filters,
+            'shared_with_role': template.shared_with_role,
             'created_at': template.created_at.isoformat()
         }
     }), 201
@@ -1010,7 +1017,7 @@ def contestadmin_create_template():
 @require_auth
 @require_role('contestadmin')
 def contestadmin_list_templates():
-    """List all report templates (user's own + global templates)"""
+    """List all report templates (user's own + global templates + role-shared templates)"""
     # Get user's own templates
     user_templates = ReportTemplate.query.filter_by(user_id=request.current_user.id).order_by(
         ReportTemplate.created_at.desc()
@@ -1021,8 +1028,16 @@ def contestadmin_list_templates():
         ReportTemplate.name
     ).all()
     
-    # Combine them (global first, then user's)
-    all_templates = global_templates + user_templates
+    # Get templates shared with user's role
+    role_shared_templates = ReportTemplate.query.filter(
+        ReportTemplate.shared_with_role == request.current_user.role,
+        ReportTemplate.user_id != request.current_user.id  # Exclude own templates (already in user_templates)
+    ).order_by(
+        ReportTemplate.created_at.desc()
+    ).all()
+    
+    # Combine them (global first, then role-shared, then user's)
+    all_templates = global_templates + role_shared_templates + user_templates
     
     return jsonify({
         'templates': [{
@@ -1032,6 +1047,8 @@ def contestadmin_list_templates():
             'fields': t.fields,
             'filters': t.filters,
             'is_global': t.is_global,
+            'shared_with_role': t.shared_with_role,
+            'is_owner': t.user_id == request.current_user.id,
             'created_at': t.created_at.isoformat(),
             'updated_at': t.updated_at.isoformat()
         } for t in all_templates]
@@ -1043,12 +1060,13 @@ def contestadmin_list_templates():
 @require_role('contestadmin')
 def contestadmin_get_template(template_id):
     """Get a specific report template"""
-    # Allow access to user's own templates or global templates
+    # Allow access to user's own templates, global templates, or role-shared templates
     template = ReportTemplate.query.filter(
         ReportTemplate.id == template_id,
         db.or_(
             ReportTemplate.user_id == request.current_user.id,
-            ReportTemplate.is_global == True
+            ReportTemplate.is_global == True,
+            ReportTemplate.shared_with_role == request.current_user.role
         )
     ).first()
     
@@ -1063,6 +1081,8 @@ def contestadmin_get_template(template_id):
             'fields': template.fields,
             'filters': template.filters,
             'is_global': template.is_global,
+            'shared_with_role': template.shared_with_role,
+            'is_owner': template.user_id == request.current_user.id,
             'created_at': template.created_at.isoformat(),
             'updated_at': template.updated_at.isoformat()
         }
@@ -1080,11 +1100,14 @@ def contestadmin_delete_template(template_id):
     ).first()
     
     if not template:
-        return jsonify({'error': 'Template not found'}), 404
+        return jsonify({'error': 'Template not found or you do not have permission to delete it'}), 404
     
     # Prevent deletion of global templates
     if template.is_global:
         return jsonify({'error': 'Cannot delete global templates'}), 403
+    
+    # Prevent deletion of role-shared templates (only owner can delete)
+    # This is already handled by the query filter above (user_id=request.current_user.id)
     
     db.session.delete(template)
     db.session.commit()
@@ -1097,12 +1120,13 @@ def contestadmin_delete_template(template_id):
 @require_role('contestadmin')
 def contestadmin_run_template(template_id):
     """Run a report template (generate report from template)"""
-    # Allow running user's own templates or global templates
+    # Allow running user's own templates, global templates, or role-shared templates
     template = ReportTemplate.query.filter(
         ReportTemplate.id == template_id,
         db.or_(
             ReportTemplate.user_id == request.current_user.id,
-            ReportTemplate.is_global == True
+            ReportTemplate.is_global == True,
+            ReportTemplate.shared_with_role == request.current_user.role
         )
     ).first()
     

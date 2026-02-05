@@ -1145,6 +1145,9 @@ async function saveReportTemplate() {
     
     const description = prompt('Enter a description (optional):');
     
+    // Ask if user wants to share with all Contest Admins
+    const shareWithContestAdmins = confirm('Share this template with all Contest Admins?\n\nClick OK to share, or Cancel to keep it private.');
+    
     // Get current filters
     const filters = {};
     const dateFrom = document.getElementById('report-date-from').value;
@@ -1164,7 +1167,8 @@ async function saveReportTemplate() {
                 name: name.trim(), 
                 description: description ? description.trim() : '',
                 fields, 
-                filters 
+                filters,
+                shared_with_role: shareWithContestAdmins ? 'contestadmin' : null
             })
         });
         
@@ -1215,12 +1219,18 @@ function displayReportTemplates(templates) {
             <tbody>
                 ${templates.map(t => {
                     const globalBadge = t.is_global ? ' <span class="badge badge-global">Global</span>' : '';
-                    const deleteBtn = t.is_global 
-                        ? '<button class="btn btn-sm btn-danger" disabled title="Global templates cannot be deleted">Delete</button>'
-                        : `<button class="btn btn-sm btn-danger" onclick="deleteReportTemplate(${t.id}, '${t.name.replace(/'/g, "\\'")}')">Delete</button>`;
+                    const sharedBadge = t.shared_with_role ? ' <span class="badge badge-shared">Shared with ' + t.shared_with_role.charAt(0).toUpperCase() + t.shared_with_role.slice(1) + 's</span>' : '';
+                    const ownerBadge = t.is_owner ? ' <span class="badge badge-owner">Your Template</span>' : '';
+                    
+                    // Disable delete button for global templates or templates not owned by user
+                    const canDelete = !t.is_global && t.is_owner;
+                    const deleteBtn = canDelete
+                        ? `<button class="btn btn-sm btn-danger" onclick="deleteReportTemplate(${t.id}, '${t.name.replace(/'/g, "\\'")}')">Delete</button>`
+                        : '<button class="btn btn-sm btn-danger" disabled title="Cannot delete this template">Delete</button>';
+                    
                     return `
                     <tr>
-                        <td><strong>${t.name}</strong>${globalBadge}</td>
+                        <td><strong>${t.name}</strong>${globalBadge}${sharedBadge}${ownerBadge}</td>
                         <td>${t.description || '-'}</td>
                         <td>${t.fields.length} field(s)</td>
                         <td>${formatDateTime(t.created_at)}</td>

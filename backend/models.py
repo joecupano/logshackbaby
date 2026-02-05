@@ -135,6 +135,7 @@ class ReportTemplate(db.Model):
     fields = db.Column(db.JSON, nullable=False)  # List of selected fields
     filters = db.Column(db.JSON, nullable=True)  # Filter configuration
     is_global = db.Column(db.Boolean, default=False)  # Global templates available to all
+    shared_with_role = db.Column(db.String(20), nullable=True)  # Share with specific role (e.g., 'contestadmin')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
