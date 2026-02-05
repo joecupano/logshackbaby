@@ -137,35 +137,6 @@ def get_logs_with_details(session_token, page=1, per_page=10):
 get_logs_with_details("your_session_token")
 ```
 
-### Retrieve Logs with Additional ADIF Fields
-```python
-import requests
-import json
-
-def get_logs_with_details(session_token, page=1, per_page=10):
-    """Get logs including all additional ADIF fields"""
-    url = f"http://localhost/api/logs?page={page}&per_page={per_page}"
-    headers = {"X-Session-Token": session_token}
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        data = response.json()
-        for log in data['logs']:
-            print(f"\nQSO: {log['call']} on {log['band']} {log['mode']}")
-            
-            # Show additional fields if present
-            if log.get('additional_fields'):
-                print(f"  Additional fields: {len(log['additional_fields'])} found")
-                for field, value in log['additional_fields'].items():
-                    print(f"    {field.upper()}: {value}")
-    else:
-        print("Failed to get logs")
-
-# Usage
-get_logs_with_details("your_session_token")
-```
-
 ### Login and Get Session Token
 ```python
 import requests

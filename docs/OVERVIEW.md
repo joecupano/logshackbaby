@@ -41,21 +41,25 @@
 
 ## 📁 Project Files
 
-### Installation & Management Scripts (6 files)
+### Installation & Management Scripts (7 files)
 1. **install-docker.sh** - Automated Docker installation script
 2. **start-docker.sh** - Start Docker containers
 3. **stop-docker.sh** - Stop Docker containers
 4. **install-local.sh** - Automated local installation (no Docker)
 5. **start-local.sh** - Start local application
 6. **stop-local.sh** - Stop local application
+7. **start.sh** - General startup script
 
-### Documentation (6 files)
+### Documentation (9 files)
 1. **README.md** - Complete user guide and documentation
-2. **PROJECT_SUMMARY.md** - Comprehensive project overview
-3. **API_EXAMPLES.md** - API usage examples (Python, cURL, Bash)
-4. **TESTING.md** - Testing procedures and automated test scripts
-5. **DEPLOYMENT_CHECKLIST.md** - Production deployment guide
-6. **sample_log.adi** - Sample ADIF file for testing
+2. **docs/PROJECT_SUMMARY.md** - Comprehensive project overview
+3. **docs/API_EXAMPLES.md** - API usage examples (Python, cURL, Bash)
+4. **docs/TESTING.md** - Testing procedures and automated test scripts
+5. **docs/DEPLOYMENT_CHECKLIST.md** - Production deployment guide
+6. **docs/DOCS_INDEX.md** - Documentation index and guide
+7. **docs/OVERVIEW.md** - Complete project overview
+8. **docs/ADIF_FIELDS_UPDATE.md** - ADIF field processing details
+9. **sample_log.adi** - Sample ADIF file for testing
 
 ### Backend (7 files)
 1. **app.py** (500 lines) - Main Flask application with all API endpoints
@@ -258,9 +262,18 @@ Persistent Volume: postgres_data
 
 ## 🚀 Quick Start
 
+**Docker Deployment:**
 ```bash
-cd /home/joe/source/logshackbaby
-./start.sh
+cd /home/pi/source/LogShackBaby
+./install-docker.sh  # First time setup
+./start-docker.sh    # Start services
+```
+
+**Local Deployment:**
+```bash
+cd /home/pi/source/LogShackBaby
+./install-local.sh   # First time setup
+./start-local.sh     # Start services
 ```
 
 Then open: http://localhost
@@ -455,10 +468,11 @@ The application is containerized, secure, and maintainable. All code is clean, w
 
 - **Project Name**: LogShackBaby
 - **Version**: 1.0.0
-- **Created**: January 4, 2026
+- **Created**: January 2026
+- **Last Updated**: February 4, 2026
 - **Technology Stack**: Python, JavaScript, PostgreSQL, Docker, NGINX
 - **License**: Open for amateur radio use
-- **Location**: /home/joe/source/logshackbaby
+- **Location**: /home/pi/source/LogShackBaby
 
 ---
 

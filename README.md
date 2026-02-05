@@ -184,13 +184,13 @@ python3 app.py
    - **sysop** - Full administrative access to create, modify, and delete users
 
 3. **Enable Two-Factor Authentication** (Recommended)
-4  - Login to your account
+   - Login to your account
    - Go to Settings tab
    - Click "Enable 2FA"
    - Scan QR code with your authenticator app
    - Enter the 6-digit code to verify
 
-3. **Create an API Key**
+4. **Create an API Key**
    - Go to "API Keys" tab
    - Click "Create New API Key"
    - Add a description (e.g., "N1MM Logger")

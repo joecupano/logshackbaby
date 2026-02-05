@@ -68,15 +68,28 @@ LogShackBaby supports two deployment methods:
 ## 📂 Project Structure
 
 ```
-logshackbaby/
+LogShackBaby/
 ├── backend/
 │   ├── app.py              # Main Flask application
 │   ├── models.py           # SQLAlchemy database models
 │   ├── auth.py             # Authentication & MFA utilities
 │   ├── adif_parser.py      # ADIF file parser
 │   ├── requirements.txt    # Python dependencies
-│   ├── Dockerfile          # Backend container definition
-│   └── .env.example        # Environment template
+│   └── Dockerfile          # Backend container definition
+│
+├── database/
+│   ├── Dockerfile          # PostgreSQL container
+│   └── README.md           # Database documentation
+│
+├── docs/
+│   ├── ADIF_FIELDS_UPDATE.md    # ADIF fields documentation
+│   ├── API_EXAMPLES.md          # API usage examples
+│   ├── DEPLOYMENT_CHECKLIST.md  # Production deployment guide
+│   ├── DOCS_INDEX.md            # Documentation index
+│   ├── OVERVIEW.md              # Project overview
+│   ├── PROJECT_FILES.txt        # File listing
+│   ├── PROJECT_SUMMARY.md       # This file
+│   └── TESTING.md               # Testing procedures
 │
 ├── frontend/
 │   ├── index.html          # Single-page application
@@ -85,29 +98,41 @@ logshackbaby/
 │   └── js/
 │       └── app.js          # Client-side JavaScript
 │
-├── database/
-│   ├── Dockerfile          # PostgreSQL container
-│   └── README.md           # Database documentation
-│
 ├── nginx/
 │   ├── nginx.conf          # Reverse proxy configuration
 │   └── ssl/
 │       └── README.md       # SSL certificate instructions
 │
-├── docker-compose.yml      # Container orchestration
+├── docker-compose.yml      # Container orchestration (production)
+├── docker-compose.dev.yml  # Development configuration
 ├── .env.example            # Environment variables template
 ├── .gitignore              # Git ignore rules
-├── start.sh                # Quick start script
+├── install-docker.sh       # Docker installation script
+├── install-local.sh        # Local installation script
+├── start-docker.sh         # Start Docker services
+├── start-local.sh          # Start local services
+├── start.sh                # General start script
+├── stop-docker.sh          # Stop Docker services
+├── stop-local.sh           # Stop local services
+├── test_adif_fields.py     # ADIF field testing
 ├── README.md               # Complete documentation
-├── API_EXAMPLES.md         # API usage examples
 └── sample_log.adi          # Test ADIF file
 ```
 
 ## 🚀 Quick Start
 
+### Docker Deployment (Recommended)
 ```bash
-cd /home/joe/source/logshackbaby
-./start.sh
+cd /home/pi/source/LogShackBaby
+./install-docker.sh  # First time setup
+./start-docker.sh    # Start services
+```
+
+### Local Deployment
+```bash
+cd /home/pi/source/LogShackBaby
+./install-local.sh   # First time setup
+./start-local.sh     # Start services
 ```
 
 Then open your browser to: http://localhost
@@ -351,17 +376,22 @@ docker-compose up -d --build
 ## 📚 Documentation Files
 
 - **README.md** - Complete setup and usage guide
-- **API_EXAMPLES.md** - Python, cURL, and Bash examples
+- **docs/API_EXAMPLES.md** - Python, cURL, and Bash examples
+- **docs/ADIF_FIELDS_UPDATE.md** - ADIF field documentation
+- **docs/DEPLOYMENT_CHECKLIST.md** - Production deployment guide
+- **docs/DOCS_INDEX.md** - Documentation index
+- **docs/OVERVIEW.md** - Project overview
+- **docs/TESTING.md** - Testing procedures
 - **database/README.md** - Database management
 - **nginx/ssl/README.md** - SSL certificate setup
 
 ## 🎯 Next Steps
 
 1. **Deploy to Production**
-   - Copy .env.example to .env
-   - Generate secure passwords
-   - Configure SSL certificates
-   - Run ./start.sh
+   - Run ./install-docker.sh (handles .env creation)
+   - Configure SSL certificates (see nginx/ssl/README.md)
+   - Run ./start-docker.sh
+   - See docs/DEPLOYMENT_CHECKLIST.md for full checklist
 
 2. **Customize**
    - Update branding in frontend/index.html
@@ -457,6 +487,6 @@ You now have a professional Amateur Radio log server that can:
 
 ---
 
-**Project Created**: January 4, 2026
+**Project Created**: January 2026
+**Last Updated**: February 4, 2026
 **Version**: 1.0.0
-**Author**: Amateur Radio Log Server Team
