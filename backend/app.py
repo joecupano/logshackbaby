@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from functools import wraps
 from datetime import datetime
 
-from models import db, User, APIKey, LogEntry, UploadLog, Session
+from models import db, User, APIKey, LogEntry, UploadLog, Session, ReportTemplate
 from auth import AuthManager
 from adif_parser import ADIFParser
 
@@ -960,6 +960,191 @@ def contestadmin_generate_report():
         'report': report_data,
         'total': len(report_data),
         'fields': fields
+    }), 200
+
+
+@app.route('/api/contestadmin/templates', methods=['POST'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_create_template():
+    """Create a new report template"""
+    data = request.get_json()
+    
+    name = data.get('name')
+    if not name or not name.strip():
+        return jsonify({'error': 'Template name is required'}), 400
+    
+    fields = data.get('fields', [])
+    if not fields:
+        return jsonify({'error': 'At least one field is required'}), 400
+    
+    description = data.get('description', '')
+    filters = data.get('filters', {})
+    
+    # Create template
+    template = ReportTemplate(
+        user_id=request.current_user.id,
+        name=name.strip(),
+        description=description.strip() if description else None,
+        fields=fields,
+        filters=filters
+    )
+    
+    db.session.add(template)
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Template created successfully',
+        'template': {
+            'id': template.id,
+            'name': template.name,
+            'description': template.description,
+            'fields': template.fields,
+            'filters': template.filters,
+            'created_at': template.created_at.isoformat()
+        }
+    }), 201
+
+
+@app.route('/api/contestadmin/templates', methods=['GET'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_list_templates():
+    """List all report templates for the current user"""
+    templates = ReportTemplate.query.filter_by(user_id=request.current_user.id).order_by(
+        ReportTemplate.created_at.desc()
+    ).all()
+    
+    return jsonify({
+        'templates': [{
+            'id': t.id,
+            'name': t.name,
+            'description': t.description,
+            'fields': t.fields,
+            'filters': t.filters,
+            'created_at': t.created_at.isoformat(),
+            'updated_at': t.updated_at.isoformat()
+        } for t in templates]
+    }), 200
+
+
+@app.route('/api/contestadmin/templates/<int:template_id>', methods=['GET'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_get_template(template_id):
+    """Get a specific report template"""
+    template = ReportTemplate.query.filter_by(
+        id=template_id,
+        user_id=request.current_user.id
+    ).first()
+    
+    if not template:
+        return jsonify({'error': 'Template not found'}), 404
+    
+    return jsonify({
+        'template': {
+            'id': template.id,
+            'name': template.name,
+            'description': template.description,
+            'fields': template.fields,
+            'filters': template.filters,
+            'created_at': template.created_at.isoformat(),
+            'updated_at': template.updated_at.isoformat()
+        }
+    }), 200
+
+
+@app.route('/api/contestadmin/templates/<int:template_id>', methods=['DELETE'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_delete_template(template_id):
+    """Delete a report template"""
+    template = ReportTemplate.query.filter_by(
+        id=template_id,
+        user_id=request.current_user.id
+    ).first()
+    
+    if not template:
+        return jsonify({'error': 'Template not found'}), 404
+    
+    db.session.delete(template)
+    db.session.commit()
+    
+    return jsonify({'message': 'Template deleted successfully'}), 200
+
+
+@app.route('/api/contestadmin/templates/<int:template_id>/run', methods=['POST'])
+@require_auth
+@require_role('contestadmin')
+def contestadmin_run_template(template_id):
+    """Run a report template (generate report from template)"""
+    template = ReportTemplate.query.filter_by(
+        id=template_id,
+        user_id=request.current_user.id
+    ).first()
+    
+    if not template:
+        return jsonify({'error': 'Template not found'}), 404
+    
+    # Use the template's fields and filters to generate report
+    fields = template.fields
+    filters = template.filters or {}
+    
+    # Validate fields (same validation as in contestadmin_generate_report)
+    valid_fields = [
+        'qso_date', 'time_on', 'call', 'band', 'mode', 'freq',
+        'rst_sent', 'rst_rcvd', 'station_callsign', 'my_gridsquare',
+        'gridsquare', 'name', 'qth', 'comment', 'qso_date_off', 'time_off'
+    ]
+    
+    for field in fields:
+        if field.startswith('json:'):
+            continue
+        if field not in valid_fields and field != 'user_callsign':
+            return jsonify({'error': f'Invalid field: {field}'}), 400
+    
+    # Build query
+    date_from = filters.get('date_from')
+    date_to = filters.get('date_to')
+    bands = filters.get('bands', [])
+    modes = filters.get('modes', [])
+    user_ids = filters.get('user_ids', [])
+    
+    query = LogEntry.query.join(User)
+    
+    if date_from:
+        query = query.filter(LogEntry.qso_date >= date_from.replace('-', ''))
+    if date_to:
+        query = query.filter(LogEntry.qso_date <= date_to.replace('-', ''))
+    if bands:
+        query = query.filter(LogEntry.band.in_(bands))
+    if modes:
+        query = query.filter(LogEntry.mode.in_(modes))
+    if user_ids:
+        query = query.filter(LogEntry.user_id.in_(user_ids))
+    
+    # Get results
+    results = query.order_by(LogEntry.qso_date.desc(), LogEntry.time_on.desc()).limit(10000).all()
+    
+    # Build report data
+    report_data = []
+    for log in results:
+        row = {}
+        for field in fields:
+            if field == 'user_callsign':
+                row[field] = log.user.callsign
+            elif field.startswith('json:'):
+                json_key = field[5:]
+                row[field] = log.additional_fields.get(json_key) if log.additional_fields else None
+            else:
+                row[field] = getattr(log, field, None)
+        report_data.append(row)
+    
+    return jsonify({
+        'report': report_data,
+        'total': len(report_data),
+        'fields': fields,
+        'template_name': template.name
     }), 200
 
 

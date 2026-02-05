@@ -76,6 +76,7 @@ function setupEventListeners() {
     
     // Contest Admin Report
     document.getElementById('generate-report-btn')?.addEventListener('click', generateReport);
+    document.getElementById('save-template-btn')?.addEventListener('click', saveReportTemplate);
     document.getElementById('export-csv-btn')?.addEventListener('click', exportReportToCSV);
     
     // Subtab navigation - using event delegation
@@ -104,6 +105,8 @@ function switchContestAdminSubtab(subtabName) {
         loadContestAdminUsers();
     } else if (subtabName === 'contestadmin-report') {
         loadAdditionalFields();
+    } else if (subtabName === 'contestadmin-templates') {
+        loadReportTemplates();
     }
 }
 
@@ -1123,6 +1126,154 @@ function exportReportToCSV() {
     window.URL.revokeObjectURL(url);
     
     showMessage('Report exported to CSV', 'success');
+}
+
+async function saveReportTemplate() {
+    const checkboxes = document.querySelectorAll('input[name="report-field"]:checked');
+    const fields = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (fields.length === 0) {
+        showMessage('Please select at least one field', 'error');
+        return;
+    }
+    
+    // Prompt for template name and description
+    const name = prompt('Enter a name for this template:');
+    if (!name || !name.trim()) {
+        return; // User cancelled or entered empty name
+    }
+    
+    const description = prompt('Enter a description (optional):');
+    
+    // Get current filters
+    const filters = {};
+    const dateFrom = document.getElementById('report-date-from').value;
+    const dateTo = document.getElementById('report-date-to').value;
+    const bandsInput = document.getElementById('report-bands').value;
+    const modesInput = document.getElementById('report-modes').value;
+    
+    if (dateFrom) filters.date_from = dateFrom;
+    if (dateTo) filters.date_to = dateTo;
+    if (bandsInput) filters.bands = bandsInput.split(',').map(b => b.trim());
+    if (modesInput) filters.modes = modesInput.split(',').map(m => m.trim());
+    
+    try {
+        const response = await apiCall('/contestadmin/templates', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                name: name.trim(), 
+                description: description ? description.trim() : '',
+                fields, 
+                filters 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('Template saved successfully', 'success');
+        } else {
+            showMessage(data.error || 'Failed to save template', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to save template', 'error');
+    }
+}
+
+async function loadReportTemplates() {
+    try {
+        const response = await apiCall('/contestadmin/templates');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayReportTemplates(data.templates);
+        }
+    } catch (error) {
+        showMessage('Failed to load templates', 'error');
+    }
+}
+
+function displayReportTemplates(templates) {
+    const container = document.getElementById('templates-list');
+    
+    if (templates.length === 0) {
+        container.innerHTML = '<p>No templates saved yet. Create templates from the Report Generator tab.</p>';
+        return;
+    }
+    
+    const html = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Fields</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${templates.map(t => `
+                    <tr>
+                        <td><strong>${t.name}</strong></td>
+                        <td>${t.description || '-'}</td>
+                        <td>${t.fields.length} field(s)</td>
+                        <td>${formatDateTime(t.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="runReportTemplate(${t.id})">Run</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteReportTemplate(${t.id}, '${t.name.replace(/'/g, "\\'")}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+async function runReportTemplate(templateId) {
+    try {
+        const response = await apiCall(`/contestadmin/templates/${templateId}/run`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Switch to report generator tab and display results
+            switchContestAdminSubtab('contestadmin-report');
+            displayReport(data.report, data.fields, data.total);
+            showMessage(`Report generated from template: ${data.template_name}`, 'success');
+        } else {
+            showMessage(data.error || 'Failed to run template', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to run template', 'error');
+    }
+}
+
+async function deleteReportTemplate(templateId, templateName) {
+    if (!confirm(`Are you sure you want to delete the template "${templateName}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/contestadmin/templates/${templateId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('Template deleted successfully', 'success');
+            loadReportTemplates(); // Reload the list
+        } else {
+            showMessage(data.error || 'Failed to delete template', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to delete template', 'error');
+    }
 }
 
 // Admin Functions - Log Admin

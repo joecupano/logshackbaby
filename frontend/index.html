@@ -303,6 +303,7 @@
                         <div class="subtabs">
                             <button class="subtab active" data-subtab="contestadmin-users">Users</button>
                             <button class="subtab" data-subtab="contestadmin-report">Report Generator</button>
+                            <button class="subtab" data-subtab="contestadmin-templates">Templates</button>
                         </div>
 
                         <div id="contestadmin-users" class="subtab-content active">
@@ -362,6 +363,7 @@
                                 </div>
 
                                 <button id="generate-report-btn" class="btn btn-primary">Generate Report</button>
+                                <button id="save-template-btn" class="btn btn-secondary">Save as Template</button>
                                 <button id="export-csv-btn" class="btn btn-secondary hidden">Export to CSV</button>
                             </div>
 
@@ -369,6 +371,13 @@
                                 <h4>Results <span id="report-count"></span></h4>
                                 <div id="report-table-container"></div>
                             </div>
+                        </div>
+
+                        <div id="contestadmin-templates" class="subtab-content">
+                            <h3>Report Templates</h3>
+                            <p>Saved report templates for quick access</p>
+                            
+                            <div id="templates-list"></div>
                         </div>
                     </div>
 

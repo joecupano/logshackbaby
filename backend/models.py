@@ -123,3 +123,19 @@ class UploadLog(db.Model):
     
     def __repr__(self):
         return f'<UploadLog {self.filename} - {self.status}>'
+
+
+class ReportTemplate(db.Model):
+    __tablename__ = 'report_templates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    fields = db.Column(db.JSON, nullable=False)  # List of selected fields
+    filters = db.Column(db.JSON, nullable=True)  # Filter configuration
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<ReportTemplate {self.name}>'
