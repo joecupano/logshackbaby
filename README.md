@@ -4,6 +4,12 @@
 
 LogShackBaby provides a secure, containerized solution for uploading, storing, and managing amateur radio QSO logs in ADIF 3.1.6 format with multi-factor authentication and API support.
 
+## 📚 Documentation
+
+- **[User Guide](docs/USERGUIDE.md)** - Complete guide for end users
+- **[Administration Guide](docs/ADMINISTRATION.md)** - Setup, deployment, and maintenance
+- **[Development Guide](docs/DEVELOPMENT.md)** - Technical documentation and API reference
+
 ## Features
 
 ### Core Functionality
@@ -34,139 +40,27 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ## Quick Start
 
-### Prerequisites
-- Docker and Docker Compose
-- 2GB RAM minimum
-- 10GB disk space for logs
+### Docker Deployment (Recommended)
 
-### Installation
-
-LogShackBaby supports two deployment methods: **Docker** (containerized) and **Local** (native installation).
-
-#### Option 1: Docker Deployment (Recommended for Production)
-
-Easiest setup with full isolation and portability:
-
-1. **Clone or extract the project**
-   ```bash
-   cd /home/pi/source/LogShackBaby
-   ```
-
-2. **Run the Docker installation script**
-   ```bash
-   ./install-docker.sh
-   ```
-
-The script will:
-- Check for and install Docker if needed
-- Set up user permissions for Docker
-- Create `.env` file with secure random passwords
-- Build all Docker images
-- Create persistent volumes
-
-3. **Start the application**
-   ```bash
-   ./start-docker.sh
-   ```
-
-4. **Access the application**
-   - Open your browser to: `http://localhost` (NGINX)
-   - Or: `http://localhost:5000` (direct app access)
-   - For SSL: Configure NGINX with your certificates (see NGINX Configuration)
-
-**Docker Management:**
 ```bash
-# Start containers
-./start-docker.sh
-
-# Stop containers
-./stop-docker.sh
-
-# View logs
-docker-compose logs -f
-
-# Restart services
-docker-compose restart
-
-# Check status
-docker-compose ps
+cd /home/pi/source/LogShackBaby
+./install-docker.sh  # First time setup
+./start-docker.sh    # Start services
 ```
 
-#### Option 2: Local Installation (Native - No Docker)
+Access at: `http://localhost`
 
-Install and run directly on your system:
+### Local Deployment (No Docker)
 
-1. **Clone or extract the project**
-   ```bash
-   cd /home/pi/source/LogShackBaby
-   ```
-
-2. **Run the local installation script**
-   ```bash
-   ./install-local.sh
-   ```
-
-The script will:
-- Check for and install Python 3, PostgreSQL, and dependencies
-- Create PostgreSQL database with secure random password
-- Set up Python virtual environment
-- Install all Python dependencies
-- Initialize database schema
-- Optionally create systemd service
-
-3. **Start the application**
-   ```bash
-   ./start-local.sh
-   ```
-
-4. **Access the application**
-   - Open your browser to: `http://localhost:5000`
-
-**Local Management:**
 ```bash
-# Start application
-./start-local.sh
-
-# Stop application (Ctrl+C or in another terminal)
-./stop-local.sh
-
-# If using systemd service
-sudo systemctl start logshackbaby
-sudo systemctl stop logshackbaby
-sudo systemctl status logshackbaby
-sudo journalctl -u logshackbaby -f
+cd /home/pi/source/LogShackBaby
+./install-local.sh   # First time setup
+./start-local.sh     # Start services
 ```
 
-#### Option 3: Manual Installation
+Access at: `http://localhost:5000`
 
-If you prefer complete manual control:
-
-**Docker:**
-```bash
-cp .env.example .env
-nano .env  # Edit with your secure passwords
-docker-compose build
-docker-compose up -d
-```
-
-**Local:**
-```bash
-# Install dependencies
-sudo apt-get install postgresql python3 python3-pip python3-venv
-
-# Create database
-sudo -u postgres createdb logshackbaby
-sudo -u postgres createuser logshackbaby
-
-# Set up Python environment
-python3 -m venv venv
-source venv/bin/activate
-pip install -r backend/requirements.txt
-
-# Configure and run
-cd backend
-python3 app.py
-```
+**📖 For detailed installation instructions, see [Administration Guide](docs/ADMINISTRATION.md)**
 
 ### First Time Setup
 
@@ -280,187 +174,46 @@ X-API-Key: your_api_key_here
 Content-Type: multipart/form-data
 
 file: <ADIF file>
-```
+`` Getting Started
 
-Response:
-```json
-{
-  "message": "Upload successful",
-  "total": 150,
-  "new": 145,
-  "duplicates": 5,
-  "errors": 0
-}
-```
+### First Time Setup
 
-#### Get Logs
-```http
-GET /api/logs?page=1&per_page=50&callsign=W1ABC&band=20m&mode=SSB
-X-Session-Token: your_session_token
-```
+1. **Register an account** - First user automatically becomes system administrator
+2. **Enable Two-Factor Authentication** (recommended)
+3. **Create an API Key** for log uploads
+4. **Upload your logs** via web interface or API
 
-#### Get Statistics
-```http
-GET /api/logs/stats
-X-Session-Token: your_session_token
-```
+**📖 For complete instructions, see [User Guide](docs/USERGUIDE.md)**
 
-#### Export Logs (ADIF)
-```http
-GET /api/logs/export?callsign=W1ABC&band=20m&mode=SSB
-X-Session-Token: your_session_token
-```
+## User Roles
 
-Response: ADIF file download
+- **user** - Manage own logs, API keys, and settings
+- **contestadmin** - Generate reports from all user logs
+- **logadmin** - View and manage all user logs
+- **sysop** - Full system administration
 
-#### Create API Key
-```http
-POST /api/keys
-X-Session-Token: your_session_token
-Content-Type: application/json
+**📖 For details on roles and permissions, see [User Guide](docs/USERGUIDE.md)**
 
-{
-  "description": "N1MM Logger"
-}
-```
+## API Overview
 
-### Example: Upload Log with cURL
+LogShackBaby provides a complete REST API for programmatic access.
 
+**Authentication:** Session tokens or API keys  
+**Endpoints:** 30+ endpoints for logs, users, and administration
+
+**Common Operations:**
 ```bash
+# Upload log
 curl -X POST http://localhost/api/logs/upload \
-  -H "X-API-Key: your_api_key_here" \
-  -F "file=@my_log.adi"
+  -H "X-API-Key: your_key" \
+  -F "file=@log.adi"
+
+# Get statistics
+curl http://localhost:5000/api/logs/stats \
+  -H "X-Session-Token: your_token"
 ```
 
-### Example: Upload Log with Python
-
-```python
-import requests
-
-api_key = "your_api_key_here"
-log_file = "my_log.adi"
-
-with open(log_file, 'rb') as f:
-    response = requests.post(
-        'http://localhost/api/logs/upload',
-        headers={'X-API-Key': api_key},
-        files={'file': f}
-    )
-
-print(response.json())
-```
-
-## ADIF Format Support
-
-LogShackBaby fully supports ADIF 3.1.6 format files and processes **all ADIF fields**.
-
-### How ADIF Fields Are Processed
-
-**Core Fields** (stored in dedicated database columns for fast searching/filtering):
-- `QSO_DATE` - Date of QSO (YYYYMMDD) **[Required]**
-- `TIME_ON` - Start time (HHMMSS) **[Required]**
-- `CALL` - Contacted station's callsign **[Required]**
-- `BAND` - Band (e.g., 20m, 2m)
-- `MODE` - Mode (e.g., SSB, CW, FT8)
-- `FREQ` - Frequency in MHz
-- `RST_SENT` / `RST_RCVD` - Signal reports
-- `STATION_CALLSIGN` - Your callsign
-- `MY_GRIDSQUARE` - Your grid square
-- `GRIDSQUARE` - Contacted station's grid
-- `NAME` - Operator name
-- `QTH` - Location
-- `COMMENT` - QSO notes
-- `QSO_DATE_OFF` / `TIME_OFF` - End date/time
-
-**All Other ADIF Fields** (automatically stored in `additional_fields` JSON column):
-
-The parser captures ALL fields from the ADIF 3.1.6 specification, including:
-- Station details: `OPERATOR`, `OWNER_CALLSIGN`, `MY_CITY`, `MY_COUNTRY`, etc.
-- Contest fields: `CONTEST_ID`, `SRX`, `STX`, `PRECEDENCE`, `CLASS`, etc.
-- QSL tracking: `QSL_SENT`, `QSL_RCVD`, `LOTW_QSL_SENT`, `EQSL_QSL_RCVD`, etc.
-- Power/Propagation: `TX_PWR`, `PROP_MODE`, `SAT_NAME`, `ANT_AZ`, etc.
-- Award tracking: `AWARD_SUBMITTED`, `AWARD_GRANTED`, `CREDIT_SUBMITTED`, etc.
-- Digital modes: `SUBMODE`, application-specific fields (N1MM, LOTW, eQSL, etc.)
-- Location data: `LAT`, `LON`, `CNTY`, `STATE`, `COUNTRY`, `DXCC`, etc.
-- And 100+ more fields...
-
-### Viewing Additional Fields
-
-In the web interface, the "Logs" tab shows a column called "Additional" which displays:
-- A badge showing the count of additional ADIF fields captured for each QSO
-- Hover over the badge to see a tooltip with all additional field names and values
-- This makes it easy to see which QSOs have extra metadata
-
-### Example ADIF File
-
-```adif
-<ADIF_VER:5>3.1.6
-<PROGRAMID:12>LogShackBaby
-<EOH>
-
-<CALL:5>W1ABC <QSO_DATE:8>20240101 <TIME_ON:6>143000 
-<BAND:3>20m <MODE:3>SSB <FREQ:8>14.250000 
-<RST_SENT:2>59 <RST_RCVD:2>59 
-<TX_PWR:3>100 <OPERATOR:5>K1XYZ <CONTEST_ID:7>CQ-WPX
-<EOR>
-```
-
-All fields are captured and stored, preserving the complete QSO record.
-
-## Deployment
-
-### Production Deployment with Existing NGINX
-
-If you have an existing NGINX reverse proxy with SSL:
-
-1. **Disable the built-in NGINX container**
-   
-   Edit `docker-compose.yml` and comment out the nginx service.
-
-2. **Configure your existing NGINX**
-   
-   Add this location block to your NGINX config:
-   
-   ```nginx
-   location / {
-       proxy_pass http://localhost:5000;
-       proxy_set_header Host $host;
-       proxy_set_header X-Real-IP $remote_addr;
-       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-       proxy_set_header X-Forwarded-Proto $scheme;
-       client_max_body_size 20M;
-   }
-   ```
-
-3. **Ensure Docker network access**
-   
-   If your NGINX is in a Docker container, add it to the `logshackbaby-network`:
-   
-   ```yaml
-   networks:
-     logshackbaby-network:
-       external: true
-   ```
-
-### Security Hardening
-
-1. **Change default passwords**
-   - Update `DB_PASSWORD` in `.env`
-   - Generate secure `SECRET_KEY`
-
-2. **Enable HTTPS**
-   - Configure SSL certificates in NGINX
-   - Force HTTPS redirects
-
-3. **Firewall rules**
-   - Only expose port 80/443 to internet
-   - Keep port 5000 internal
-
-4. **Regular backups**
-   ```bash
-   # Backup database
-   docker exec logshackbaby-db pg_dump -U logshackbaby logshackbaby > backup.sql
-   
+**📖 For complete API documentation, see [Development Guide](docs/DEVELOPMENT.md)**
    # Backup with date
    docker exec logshackbaby-db pg_dump -U logshackbaby logshackbaby > backup-$(date +%Y%m%d).sql
    ```
@@ -493,60 +246,20 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-### Database Backup
-```bash
-# Create backup
-docker exec logshackbaby-db pg_dump -U logshackbaby logshackbaby > backup.sql
+### Database Backup**ADIF 3.1.6** and captures **all 100+ ADIF fields**.
 
-# Restore backup
-docker exec -i logshackbaby-db psql -U logshackbaby logshackbaby < backup.sql
-```
+**Core Fields** are stored in dedicated database columns for fast searching:
+- QSO_DATE, TIME_ON, CALL (required)
+- BAND, MODE, FREQ, RST_SENT, RST_RCVD
+- STATION_CALLSIGN, MY_GRIDSQUARE, GRIDSQUARE
+- NAME, QTH, COMMENT
 
-### Access Database
-```bash
-docker exec -it logshackbaby-db psql -U logshackbaby -d logshackbaby
-```
+**Additional Fields** (100+ fields) are automatically captured in JSON storage:
+- Contest information, QSL tracking, power/propagation
+- Station details, awards, digital modes
+- Location data, and more
 
-### Clean Up Old Data
-```sql
--- Delete logs older than 5 years
-DELETE FROM log_entries 
-WHERE uploaded_at < NOW() - INTERVAL '5 years';
-
--- Vacuum database
-VACUUM ANALYZE;
-```
-
-## Troubleshooting
-
-### Container won't start
-```bash
-# Check logs
-docker-compose logs app
-
-# Check database
-docker-compose logs db
-
-# Rebuild
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
-```
-
-### Database connection error
-```bash
-# Wait for database to be ready
-docker-compose restart app
-
-# Check database health
-docker exec logshackbaby-db pg_isready -U logshackbaby
-```
-
-### Upload fails
-- Check file is valid ADIF format
-- Verify API key is correct
-- Check file size (max 16MB)
-- Review application logs
+**📖 For ADIF implementation details, see [Development Guide](docs/DEVELOPMENT.md)**
 
 ### MFA issues
 - Ensure time is synchronized on server and client
@@ -588,44 +301,70 @@ logshackbaby/
 │   ├── index.html      # Main HTML
 │   ├── css/
 │   │   └── style.css   # Styles
-│   └── js/
-│       └── app.js      # JavaScript application
-├── database/           # PostgreSQL configuration
-├── nginx/              # NGINX configuration
-│   ├── nginx.conf     # Reverse proxy config
-│   └── ssl/           # SSL certificates
-├── docker-compose.yml # Container orchestration
-└── README.md         # This file
+│   └── js/ & Maintenance
+
+**📖 For complete deployment instructions, see [Administration Guide](docs/ADMINISTRATION.md)**
+
+### Quick Commands
+
+```bash
+# Docker
+./start-docker.sh          # Start services
+./stop-docker.sh           # Stop services
+docker-compose logs -f     # View logs
+
+# Local
+./start-local.sh           # Start application
+./stop-local.sh            # Stop application
+
+# Backup
+docker exec logshackbaby-db pg_dump -U logshackbaby logshackbaby > backup.sql
 ```
 
-## License
+## Troubleshooting
 
-This project is provided as-is for amateur radio use. 
+**Common Issues:**
+- Container won't start → Check logs: `docker-compose logs`
+- Database connection error → Restart: `docker-compose restart app`
+- Upload fails → Check file format and API key
+-  Project Structure
 
-## Support
+```
+LogShackBaby/
+├── backend/              # Python Flask application
+├── frontend/             # Web interface (HTML/CSS/JS)
+├── database/             # PostgreSQL configuration
+├── nginx/                # NGINX reverse proxy
+├── docs/                 # Documentation
+│   ├── USERGUIDE.md      # User guide
+│   ├── ADMINISTRATION.md # Admin guide
+│   └── DEVELOPMENT.md    # Technical docs
+├── docker-compose.yml    # Container orchestration
+└── README.md             # This file
+```
 
-For issues or questions:
-1. Check the troubleshooting section
-2. Review application logs
-3. Verify configuration files
+## Technology Stack
+
+- **Backend**: Python 3.11, Flask, SQLAlchemy, Gunicorn
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Database**: PostgreSQL 16
+- **Infrastructure**: Docker, NGINX
+- **Security**: bcrypt, TOTP 2FA, API keys
 
 ## Contributing
 
-Contributions welcome! Consider adding:
-- Additional ADIF field support
-- Log export functionality
-- Contest log analysis
-- DXCC tracking
-- Award tracking (WAS, WAC, etc.)
-- Logbook of the World (LoTW) integration
-- QRZ/HamDB lookup integration
+Contributions welcome! See [Development Guide](docs/DEVELOPMENT.md) for:
+- Development environment setup
+- Code organization
+- API documentation
+- Testing procedures
 
-## Amateur Radio Resources
+## Resources
 
-- [ADIF Specification](http://www.adif.org/)
-- [ARRL](http://www.arrl.org/)
-- [QRZ.com](https://www.qrz.com/)
+- **[ADIF Specification](http://www.adif.org/)**
+- **[ARRL](http://www.arrl.org/)**
+- **[QRZ.com](https://www.qrz.com/)**
 
----
+## License
 
-**73 de LogShackBaby Team** 📻✨
+This project is provided as-is for amateur radio use.
