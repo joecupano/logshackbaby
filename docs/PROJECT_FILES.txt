@@ -1,41 +1,48 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                       LogShackBaby Project Structure                         ║
 ║                    Amateur Radio Log Server v1.0.0                          ║
+║                         Last Updated: February 5, 2026                       ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-📦 logshackbaby/
+📦 LogShackBaby/
 │
-├── 📄 Documentation (8 files, ~6,000 lines)
+├── 📄 Documentation (10 files, ~7,000+ lines)
 │   ├── README.md ........................... Main documentation & user guide
-│   ├── OVERVIEW.md ......................... Complete project overview
-│   ├── PROJECT_SUMMARY.md .................. Quick project summary
-│   ├── API_EXAMPLES.md ..................... API usage examples (cURL, Python)
-│   ├── TESTING.md .......................... Testing procedures & scripts
-│   ├── DEPLOYMENT_CHECKLIST.md ............. Production deployment guide
-│   ├── DOCS_INDEX.md ....................... Documentation navigation
+│   ├── docs/OVERVIEW.md .................... Complete project overview
+│   ├── docs/PROJECT_SUMMARY.md ............. Quick project summary
+│   ├── docs/PROJECT_FILES.txt .............. This file - project structure
+│   ├── docs/API_EXAMPLES.md ................ API usage examples (cURL, Python)
+│   ├── docs/TESTING.md ..................... Testing procedures & scripts
+│   ├── docs/DEPLOYMENT_CHECKLIST.md ........ Production deployment guide
+│   ├── docs/DOCS_INDEX.md .................. Documentation navigation
+│   ├── docs/ADIF_FIELDS_UPDATE.md .......... ADIF field processing details
 │   └── sample_log.adi ...................... Sample ADIF file (10 QSOs)
 │
-├── 🐍 Backend (7 files, ~850 lines Python)
-│   ├── app.py .............................. Flask application (500 lines)
+├── 🐍 Backend (7 files, ~1,000 lines Python)
+│   ├── app.py .............................. Flask application (1066 lines)
 │   │   ├── Authentication endpoints
 │   │   ├── MFA endpoints
 │   │   ├── API key management
-│   │   ├── Log upload/retrieval
-│   │   └── Statistics
-│   ├── models.py ........................... Database models (130 lines)
-│   │   ├── User (with MFA support)
+│   │   ├── Log upload/retrieval/export
+│   │   ├── Statistics & reporting
+│   │   ├── Role-based access (user/contestadmin/logadmin/sysop)
+│   │   └── Contest admin reports
+│   ├── models.py ........................... Database models (180 lines)
+│   │   ├── User (with MFA & roles)
 │   │   ├── APIKey
-│   │   ├── LogEntry (QSO records)
-│   │   └── UploadLog
+│   │   ├── LogEntry (QSO records + additional_fields JSON)
+│   │   ├── UploadLog
+│   │   └── Session (database-backed sessions)
 │   ├── auth.py ............................. Auth utilities (150 lines)
 │   │   ├── Password hashing (bcrypt)
 │   │   ├── MFA/TOTP generation
 │   │   ├── QR code generation
 │   │   └── API key management
-│   ├── adif_parser.py ...................... ADIF parser (120 lines)
-│   │   ├── ADIF 3.x parsing
+│   ├── adif_parser.py ...................... ADIF parser (250 lines)
+│   │   ├── ADIF 3.1.6 parsing (100+ fields)
 │   │   ├── QSO deduplication
-│   │   └── Statistics generation
+│   │   ├── Core + additional fields storage
+│   │   └── Complete field capture
 │   ├── requirements.txt .................... Python dependencies
 │   ├── Dockerfile .......................... Backend container
 │   └── .env.example ........................ Environment template
@@ -80,28 +87,45 @@
 │   ├── docker-compose.yml .................. Production orchestration
 │   │   ├── app (Flask + Gunicorn)
 │   │   ├── db (PostgreSQL 16)
-│   │   └── nginx (Reverse proxy)
-│   ├── docker-compose.dev.yml .............. Development config
-│   └── .env.example ........................ Environment variables
+├── 🚀 Installation & Management Scripts (7 files)
+│   ├── install-docker.sh ................... Automated Docker setup
+│   ├── start-docker.sh ..................... Start Docker containers
+│   ├── stop-docker.sh ...................... Stop Docker containers
+│   ├── install-local.sh .................... Automated local setup (no Docker)
+│   ├── start-local.sh ...................... Start local application
+│   ├── stop-local.sh ....................... Stop local application
+│   └── start.sh ............................ General startup script
 │
-└── 🚀 Quick Start
-    ├── start.sh ............................ One-command startup
-    └── .gitignore .......................... Git ignore rules
-
+├── 🧪 Testing
+│   └── test_adif_fields.py ................. ADIF field capture tests
+│35+ files                                               ║
+║  Code Lines:         ~2,700+ lines                                           ║
+║  Documentation:      ~7,000+ lines                                           ║
+║  Languages:          Python, JavaScript, HTML, CSS, Shell, SQL               ║
+║  Containers:         3 (app, db, nginx)                                      ║
+║  API Endpoints:      30+ endpoints                                           ║
+║  Database Tables:    5 tables (users, api_keys, log_entries, upload_logs,   ║
+║                      sessions)                                               ║
+║  Security:           bcrypt + TOTP MFA + API keys + role-based access       ║
+║  User Roles:         4 (user, contestadmin, logadmin, sysop)                ║
+║  ADIF Fields:        100+ fields supported (ADIF 3.1.6 compliant)
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                              Key Statistics                                  ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Total Files:        26 files                                                ║
-║  Code Lines:         ~2,564 lines                                            ║
-║  Documentation:      ~6,000 lines                                            ║
-║  Languages:          Python, JavaScript, HTML, CSS, Shell                    ║
-║  Containers:         3 (app, db, nginx)                                      ║
-║  API Endpoints:      15 endpoints                                            ║
-║  Database Tables:    4 tables                                                ║
-║  Security:           bcrypt + TOTP MFA + API keys                           ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-╔══════════════════════════════════════════════════════════════════════════════╗
+║  CoRole-based access control (4 roles)                                      ║
+║  ✅ API key management                                                       ║
+║  ✅ ADIF 3.1.6 complete field processing (100+ fields)                       ║
+║  ✅ ADIF log upload & parsing                                                ║
+║  ✅ ADIF log export & download                                               ║
+║  ✅ Automatic QSO deduplication                                              ║
+║  ✅ Web-based log viewer with additional fields display                      ║
+║  ✅ Search & filtering (callsign, band, mode, date)                          ║
+║  ✅ Contest admin report generator                                           ║
+║  ✅ Statistics dashboard                                                     ║
+║  ✅ PostgreSQL database (containerized)                                      ║
+║  ✅ NGINX reverse proxy with SSL                                             ║
+║  ✅ Docker & Local deployment options═════════════════════════════════════════╗
 ║                              Features Included                               ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  ✅ User registration & authentication                                       ║
@@ -116,11 +140,17 @@
 ║  ✅ PostgreSQL database (containerized)                                      ║
 ║  ✅ NGINX reverse proxy with SSL                                             ║
 ║  ✅ Docker deployment                                                        ║
-║  ✅ Comprehensive documentation                                              ║
-╚══════════════════════════════════════════════════════════════════════════════╝
-
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                              Quick Commands                                  ║
+║  Docker Setup:       ./install-docker.sh (first time)                        ║
+║  Docker Start:       ./start-docker.sh                                       ║
+║  Docker Stop:        ./stop-docker.sh                                        ║
+║  Local Setup:        ./install-local.sh (first time)                         ║
+║  Local Start:        ./start-local.sh                                        ║
+║  Local Stop:         ./stop-local.sh                                         ║
+║  View Logs:          docker-compose logs -f  (Docker)                        ║
+║  Backup DB:          docker exec logshackbaby-db pg_dump -U logshackbaby    ║
+║                      logshackbaby > backup.sql                               ║
+║  Access URL:         http://localhost (Docker via NGINX)                     ║
+║                      http://localhost:5000 (Local or Docker direct)          ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║  Start:              ./start.sh                                              ║
 ║  Stop:               docker-compose down                                     ║
