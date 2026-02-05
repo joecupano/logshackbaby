@@ -1010,10 +1010,19 @@ def contestadmin_create_template():
 @require_auth
 @require_role('contestadmin')
 def contestadmin_list_templates():
-    """List all report templates for the current user"""
-    templates = ReportTemplate.query.filter_by(user_id=request.current_user.id).order_by(
+    """List all report templates (user's own + global templates)"""
+    # Get user's own templates
+    user_templates = ReportTemplate.query.filter_by(user_id=request.current_user.id).order_by(
         ReportTemplate.created_at.desc()
     ).all()
+    
+    # Get global templates
+    global_templates = ReportTemplate.query.filter_by(is_global=True).order_by(
+        ReportTemplate.name
+    ).all()
+    
+    # Combine them (global first, then user's)
+    all_templates = global_templates + user_templates
     
     return jsonify({
         'templates': [{
@@ -1022,9 +1031,10 @@ def contestadmin_list_templates():
             'description': t.description,
             'fields': t.fields,
             'filters': t.filters,
+            'is_global': t.is_global,
             'created_at': t.created_at.isoformat(),
             'updated_at': t.updated_at.isoformat()
-        } for t in templates]
+        } for t in all_templates]
     }), 200
 
 
@@ -1033,9 +1043,13 @@ def contestadmin_list_templates():
 @require_role('contestadmin')
 def contestadmin_get_template(template_id):
     """Get a specific report template"""
-    template = ReportTemplate.query.filter_by(
-        id=template_id,
-        user_id=request.current_user.id
+    # Allow access to user's own templates or global templates
+    template = ReportTemplate.query.filter(
+        ReportTemplate.id == template_id,
+        db.or_(
+            ReportTemplate.user_id == request.current_user.id,
+            ReportTemplate.is_global == True
+        )
     ).first()
     
     if not template:
@@ -1048,6 +1062,7 @@ def contestadmin_get_template(template_id):
             'description': template.description,
             'fields': template.fields,
             'filters': template.filters,
+            'is_global': template.is_global,
             'created_at': template.created_at.isoformat(),
             'updated_at': template.updated_at.isoformat()
         }
@@ -1067,6 +1082,10 @@ def contestadmin_delete_template(template_id):
     if not template:
         return jsonify({'error': 'Template not found'}), 404
     
+    # Prevent deletion of global templates
+    if template.is_global:
+        return jsonify({'error': 'Cannot delete global templates'}), 403
+    
     db.session.delete(template)
     db.session.commit()
     
@@ -1078,9 +1097,13 @@ def contestadmin_delete_template(template_id):
 @require_role('contestadmin')
 def contestadmin_run_template(template_id):
     """Run a report template (generate report from template)"""
-    template = ReportTemplate.query.filter_by(
-        id=template_id,
-        user_id=request.current_user.id
+    # Allow running user's own templates or global templates
+    template = ReportTemplate.query.filter(
+        ReportTemplate.id == template_id,
+        db.or_(
+            ReportTemplate.user_id == request.current_user.id,
+            ReportTemplate.is_global == True
+        )
     ).first()
     
     if not template:
@@ -1241,10 +1264,58 @@ def health():
 def init_db():
     """Initialize the database"""
     db.create_all()
+    init_default_templates()
     print('Database initialized!')
+
+
+def init_default_templates():
+    """Initialize default global report templates"""
+    # Check if global templates already exist
+    existing = ReportTemplate.query.filter_by(is_global=True).count()
+    if existing > 0:
+        return  # Already initialized
+    
+    default_templates = [
+        {
+            'name': 'Grid Square Globetrotter',
+            'description': 'Track unique Maidenhead grid squares worked. Perfect for 30-day diversity contests.',
+            'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'gridsquare', 'band', 'mode'],
+            'filters': {},
+            'is_global': True
+        },
+        {
+            'name': 'Band-Hopper Challenge',
+            'description': 'Make contacts on as many different amateur bands as possible. Explore new frequencies!',
+            'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'band', 'mode', 'freq'],
+            'filters': {},
+            'is_global': True
+        },
+        {
+            'name': 'Elmer\'s Choice (Mode Diversity)',
+            'description': 'Work across CW, Phone (SSB/FM), and Digital modes. Become an all-arounder!',
+            'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'mode', 'band', 'rst_sent', 'rst_rcvd'],
+            'filters': {},
+            'is_global': True
+        }
+    ]
+    
+    for template_data in default_templates:
+        template = ReportTemplate(
+            user_id=None,  # Global templates have no owner
+            name=template_data['name'],
+            description=template_data['description'],
+            fields=template_data['fields'],
+            filters=template_data['filters'],
+            is_global=True
+        )
+        db.session.add(template)
+    
+    db.session.commit()
+    print('Default templates initialized!')
 
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        init_default_templates()
     app.run(host='0.0.0.0', port=5000, debug=False)

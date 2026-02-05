@@ -1213,18 +1213,24 @@ function displayReportTemplates(templates) {
                 </tr>
             </thead>
             <tbody>
-                ${templates.map(t => `
+                ${templates.map(t => {
+                    const globalBadge = t.is_global ? ' <span class="badge badge-global">Global</span>' : '';
+                    const deleteBtn = t.is_global 
+                        ? '<button class="btn btn-sm btn-danger" disabled title="Global templates cannot be deleted">Delete</button>'
+                        : `<button class="btn btn-sm btn-danger" onclick="deleteReportTemplate(${t.id}, '${t.name.replace(/'/g, "\\'")}')">Delete</button>`;
+                    return `
                     <tr>
-                        <td><strong>${t.name}</strong></td>
+                        <td><strong>${t.name}</strong>${globalBadge}</td>
                         <td>${t.description || '-'}</td>
                         <td>${t.fields.length} field(s)</td>
                         <td>${formatDateTime(t.created_at)}</td>
                         <td>
                             <button class="btn btn-sm btn-primary" onclick="runReportTemplate(${t.id})">Run</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteReportTemplate(${t.id}, '${t.name.replace(/'/g, "\\'")}')">Delete</button>
+                            ${deleteBtn}
                         </td>
                     </tr>
-                `).join('')}
+                `;
+                }).join('')}
             </tbody>
         </table>
     `;

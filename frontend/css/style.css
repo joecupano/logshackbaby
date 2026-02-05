@@ -669,6 +669,12 @@ tbody tr:hover {
     color: #7b1fa2;
 }
 
+.badge-global {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
 .btn-sm {
     padding: 6px 12px;
     font-size: 0.9em;

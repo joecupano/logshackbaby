@@ -129,11 +129,12 @@ class ReportTemplate(db.Model):
     __tablename__ = 'report_templates'
     
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Null for global templates
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     fields = db.Column(db.JSON, nullable=False)  # List of selected fields
     filters = db.Column(db.JSON, nullable=True)  # Filter configuration
+    is_global = db.Column(db.Boolean, default=False)  # Global templates available to all
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
