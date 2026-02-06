@@ -309,17 +309,37 @@ Authenticate user and receive session token.
   "session_token": "abc123...",
   "callsign": "W1ABC",
   "role": "user",
-  "mfa_required": false
+  "mfa_required": false,
+  "must_change_password": false
 }
 ```
 
 If MFA enabled:
 ```json
 {
+  "session_token": "abc123...",
+  "callsign": "W1ABC", 
+  "role": "user",
   "mfa_required": true,
-  "mfa_token": "temp_token_for_mfa"
+  "must_change_password": false
 }
 ```
+
+If password reset by admin:
+```json
+{
+  "session_token": "abc123...",
+  "callsign": "W1ABC",
+  "role": "user", 
+  "mfa_required": false,
+  "must_change_password": true
+}
+```
+
+**Notes:**
+- If `must_change_password` is TRUE, user will be forced to change password
+- If both `mfa_required` and `must_change_password` are TRUE, MFA verification happens first
+- After MFA verification, the `/api/mfa/verify` response also includes `must_change_password` flag
 
 **Errors:**
 - `400`: Missing credentials
@@ -362,6 +382,78 @@ Invalidate session token.
   "message": "Logged out successfully"
 }
 ```
+
+---
+
+#### POST /api/change-password
+
+Change user's password. Works for both voluntary password changes and forced password changes after admin reset.
+
+**Headers:** `X-Session-Token`
+
+**Request:**
+```json
+{
+  "current_password": "current_or_temporary_password",
+  "new_password": "new_secure_password"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password changed successfully"
+}
+```
+
+**Errors:**
+- `400`: Missing required fields or new password too short
+- `401`: Current password is incorrect
+
+**Notes:**
+- New password must be at least 8 characters
+- Current password must be verified before change
+- Automatically clears `must_change_password` flag
+- This endpoint is accessible even when `must_change_password = TRUE` (all other endpoints are blocked)
+
+---
+
+#### POST /api/admin/users/:user_id/reset-password
+
+Reset a user's password with automatically generated temporary password. User will be forced to change password on next login.
+
+**Role Required:** `sysop`
+
+**Headers:** `X-Session-Token`
+
+**Parameters:**
+- `user_id` (URL path): The ID of the user whose password to reset
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Password reset successfully",
+  "temporary_password": "Ab3dEf9hIjKl",
+  "callsign": "W1ABC"
+}
+```
+
+**Errors:**
+- `401`: Authentication required
+- `403`: Insufficient permissions (not sysop)
+- `404`: User not found
+
+**Behavior:**
+- Generates secure 12-character random temporary password
+- Sets user's `must_change_password = TRUE`
+- Invalidates all existing sessions for that user
+- Returns temporary password (shown only once)
+
+**Security Notes:**
+- Temporary password is only returned in this response - not stored anywhere
+- All user sessions are terminated immediately
+- User must log in with temporary password and change it before accessing features
+- Temporary password uses cryptographically secure random generation
 
 ---
 
@@ -786,11 +878,17 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT true,
     mfa_secret VARCHAR(32),
     mfa_enabled BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    must_change_password BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP
 );
 ```
 
 **Roles:** `user`, `contestadmin`, `logadmin`, `sysop`
+
+**Password Reset Fields:**
+- `must_change_password`: Set to TRUE when admin resets password, forces user to change password on next login
+- When TRUE, user cannot access any endpoints except `/api/change-password`
 
 ### API Keys Table
 
@@ -941,6 +1039,46 @@ password_hash = hashpw(password.encode('utf-8'), gensalt())
 
 # Verify password
 checkpw(password.encode('utf-8'), stored_hash)
+```
+
+**Password Reset Flow:**
+
+When an administrator resets a user's password:
+
+1. **Generate Temporary Password:**
+   ```python
+   import secrets
+   import string
+   alphabet = string.ascii_letters + string.digits
+   temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
+   ```
+
+2. **Update User Record:**
+   ```python
+   user.password_hash = AuthManager.hash_password(temp_password)
+   user.must_change_password = True
+   ```
+
+3. **Invalidate Sessions:**
+   ```python
+   Session.query.filter_by(user_id=user.id).delete()
+   ```
+
+4. **Enforce Password Change:**
+   - The `require_auth` decorator checks `must_change_password` flag
+   - If TRUE, blocks all requests except to `/api/change-password`
+   - User redirected to password change screen in frontend
+   - After successful password change, flag is set to FALSE
+
+**Password Change Endpoint:**
+```python
+@app.route('/api/change-password', methods=['POST'])
+@require_auth
+def change_password():
+    # Verify current password
+    # Validate new password (min 8 chars)
+    # Update password_hash
+    # Set must_change_password = False
 ```
 
 ### Multi-Factor Authentication

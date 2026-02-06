@@ -571,36 +571,114 @@ The first registered user automatically becomes a **sysop** (system administrato
 
 ### Resetting User Passwords
 
-**New Password Reset Feature:**
+#### Automatic Password Reset (Recommended)
 
-As sysop, you can now reset any user's password with an automatically generated temporary password:
+As sysop, you can reset any user's password with an automatically generated temporary password that forces the user to create a new password on next login.
 
-1. Log in as sysop
-2. Go to "System Admin" tab
-3. Find the user
-4. Click "Reset Password"
-5. Confirm the action
-6. **Copy the temporary password** shown in the modal (shown only once!)
-7. Securely communicate the temporary password to the user
+**Step-by-Step Process:**
 
-When the user logs in with the temporary password:
-- They will be forced to change their password immediately
-- All their existing sessions will be invalidated
-- They cannot access any features until they set a new password
+1. **Navigate to System Admin**
+   - Log in as sysop
+   - Click the "System Admin" tab
 
-For detailed information about the password reset feature, see [PASSWORD_RESET.md](PASSWORD_RESET.md).
+2. **Find the User**
+   - Locate the user in the user list
+   - Users are listed with callsign, email, role, and status
 
-**Alternative Method (Manual):**
+3. **Initiate Password Reset**
+   - Click the yellow "Reset Password" button next to the user's name
+   - A confirmation dialog will appear
 
-You can also manually set a password through the edit interface:
+4. **Confirm the Action**
+   - Click "OK" to confirm
+   - System generates a secure 12-character temporary password
+
+5. **Copy the Temporary Password**
+   - A modal dialog displays the temporary password
+   - **⚠️ IMPORTANT**: This password is shown only once!
+   - Click the "Copy" button to copy to clipboard
+   - Or manually note down the password before closing
+
+6. **Communicate to User**
+   - Securely send the temporary password to the user
+   - Do not send via unencrypted email if possible
+   - Consider phone call, encrypted message, or in-person
+
+7. **Close the Modal**
+   - Click "Close" to dismiss the modal
+
+**What Happens Behind the Scenes:**
+- User's password is immediately changed to the temporary password
+- `must_change_password` flag is set to `TRUE` in database
+- All user's existing sessions are invalidated (forced logout)
+- User must log in with temporary password and change it before accessing any features
+
+**User Experience:**
+
+When the user logs in:
+1. They enter their callsign and the temporary password
+2. If MFA is enabled, they complete MFA verification
+3. They are automatically redirected to password change screen
+4. They must enter the temporary password and choose a new password
+5. After successful password change, they're granted full access
+6. The `must_change_password` flag is cleared
+
+**Security Features:**
+- Temporary passwords are cryptographically secure (12 characters, alphanumeric)
+- All existing sessions terminated immediately
+- User cannot access any API endpoints except `/api/change-password` until password is changed
+- Password requirements enforced (minimum 8 characters)
+- Current password verification required for change
+
+**Best Practices:**
+- Always copy the temporary password before closing the modal
+- Verify user identity before performing password reset
+- Use secure communication channels for sharing temporary passwords
+- Instruct users to change password immediately
+- Consider keeping a log of password reset actions for security audits
+
+#### Manual Password Reset (Alternative)
+
+You can also manually set a password through the edit interface, but this does NOT force the user to change it:
 
 1. Go to "System Admin" tab
 2. Find user
 3. Click "Edit"
-4. Enter new password
+4. Enter new password in the password field
 5. Click "Save"
 
-With this method, the user will NOT be forced to change the password.
+**Note**: With this method, the user will NOT be forced to change the password and can continue using this password indefinitely.
+
+#### Troubleshooting Password Resets
+
+**Admin Issues:**
+
+- **Modal closed before copying password**
+  - Solution: Reset the password again - system generates a new temporary password
+
+- **User says temporary password doesn't work**
+  - Verify they're entering it exactly as shown (case-sensitive)
+  - Ensure they're using the most recent temporary password if reset multiple times
+  - Check that user account is active (`is_active = true`)
+
+- **Need to track who reset passwords**
+  - Currently no audit log - consider implementing for security
+  - Check database `updated_at` field on users table
+
+**User Issues:**
+
+- **User lost temporary password**
+  - Solution: Reset password again for the user
+
+- **User stuck on password change screen**
+  - Verify they're entering the temporary password correctly
+  - Check that new password meets requirements (8+ characters)
+  - Ensure new password and confirmation match
+
+- **User cannot access after password change**
+  - Should not happen - contact development team
+  - Verify `must_change_password` flag is FALSE in database
+  - Check for JavaScript errors in browser console
 
 ### Deleting Users
 

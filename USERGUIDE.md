@@ -633,6 +633,51 @@ Add to your crontab (`crontab -e`):
 - Verify you're using the right authenticator entry
 - Contact administrator to disable 2FA if locked out
 
+### Password Has Been Reset by Administrator
+
+If your system administrator has reset your password, you'll need to change it on your next login.
+
+**What happens:**
+1. Administrator generates a temporary password for your account
+2. Administrator shares this temporary password with you securely
+3. When you log in with the temporary password, you're redirected to a password change screen
+4. You cannot access any features until you change your password
+
+**How to change your temporary password:**
+
+1. **Log in with temporary password**
+   - Enter your callsign
+   - Enter the temporary password provided by the administrator
+   - Click "Login"
+
+2. **Complete MFA if enabled**
+   - If you have two-factor authentication enabled, enter your 6-digit code
+   - Click "Verify"
+
+3. **Change your password**
+   - You'll be automatically redirected to the password change screen
+   - Enter the temporary password in "Current (Temporary) Password"
+   - Enter your new password (minimum 8 characters)
+   - Re-enter your new password to confirm
+   - Click "Change Password"
+
+4. **Access granted**
+   - You'll be redirected to your dashboard
+   - You can now use the system normally
+   - Log out and back in with your new password to verify
+
+**Important notes:**
+- Your new password must be at least 8 characters long
+- All your previous sessions are invalidated when password is reset
+- You must change the password before accessing any features
+- Choose a strong, unique password
+
+**Troubleshooting:**
+- **Temporary password doesn't work**: Verify you're entering it exactly as provided (case-sensitive)
+- **Stuck on password change screen**: Ensure new password is at least 8 characters and matches confirmation
+- **"Current password is incorrect" error**: You must enter the temporary password, not your old password
+- **Lost temporary password**: Contact administrator to reset again
+
 ### Cannot Export Logs
 
 **Check:**
