@@ -119,12 +119,21 @@ For **contestadmin** users, a powerful report generator is available:
    - Click "Generate Report" to view results
    - Export to CSV for analysis in Excel or other tools
 
-5. **Features**
+5. **Save and Use Templates**
+   - Save frequently-used reports as templates for quick access
+   - Three default contest templates are included:
+     - **Grid Square Globetrotter** - Track unique Maidenhead grids (30-day contests)
+     - **Band-Hopper** - Work as many different bands as possible
+     - **Elmer's Choice (Mode Diversity)** - Balance across CW, Phone, and Digital modes
+   - See [CONTEST_TEMPLATES.md](CONTEST_TEMPLATES.md) for detailed contest rules and usage
+
+6. **Features**
    - Read-only access to all user logs
    - Complete ADIF 3.1.6 field selection (100+ fields available)
    - Visual indicators show which fields contain data
    - CSV export for external analysis
    - Up to 10,000 records per report
+   - Template system for recurring reports and contests
 
 ## API Documentation
 

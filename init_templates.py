@@ -35,21 +35,21 @@ def init_default_templates():
         default_templates = [
             {
                 'name': 'Grid Square Globetrotter',
-                'description': 'Track unique Maidenhead grid squares worked. Perfect for 30-day diversity contests.',
+                'description': 'Contest Goal: Work as many unique Maidenhead grid squares as possible in 30 days.',
                 'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'gridsquare', 'band', 'mode'],
                 'filters': {},
                 'is_global': True
             },
             {
-                'name': 'Band-Hopper Challenge',
-                'description': 'Make contacts on as many different amateur bands as possible. Explore new frequencies!',
+                'name': 'Band-Hopper',
+                'description': 'Contest Goal: Make at least one contact on as many different amateur bands as possible.',
                 'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'band', 'mode', 'freq'],
                 'filters': {},
                 'is_global': True
             },
             {
                 'name': 'Elmer\'s Choice (Mode Diversity)',
-                'description': 'Work across CW, Phone (SSB/FM), and Digital modes. Become an all-arounder!',
+                'description': 'Contest Goal: Rack up points across three categories: CW, Phone, and Digital modes (FT8/JS8/RTTY).',
                 'fields': ['user_callsign', 'qso_date', 'time_on', 'call', 'mode', 'band', 'rst_sent', 'rst_rcvd'],
                 'filters': {},
                 'is_global': True
@@ -72,7 +72,7 @@ def init_default_templates():
         print('\n✅ Default templates initialized successfully!')
         print('\nCreated templates:')
         print('   1. Grid Square Globetrotter')
-        print('   2. Band-Hopper Challenge')
+        print('   2. Band-Hopper')
         print('   3. Elmer\'s Choice (Mode Diversity)')
 
 if __name__ == '__main__':
