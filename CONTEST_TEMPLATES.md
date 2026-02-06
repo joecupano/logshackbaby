@@ -248,11 +248,24 @@ curl -H "X-Session-Token: YOUR_TOKEN" \
 
 ## Installation
 
-Contest templates are automatically included in new LogShackBaby installations. If you need to reinstall them:
+Contest templates are **automatically initialized** during installation:
+
+- **Local Install**: `install-local.sh` creates templates automatically
+- **Docker Install**: Templates are created on first container start via `flask init-db`
+
+No manual steps required! Templates will be available immediately after installation.
+
+### Manual Reinstallation (Optional)
+
+If you need to manually reinstall or update templates:
 
 **Method 1: SQL File**
 ```bash
+# Docker
 docker exec -i logshackbaby-db psql -U logshackbaby logshackbaby < database/contest_templates.sql
+
+# Local
+sudo -u postgres psql logshackbaby < database/contest_templates.sql
 ```
 
 **Method 2: Python Script**
@@ -260,7 +273,7 @@ docker exec -i logshackbaby-db psql -U logshackbaby logshackbaby < database/cont
 python3 init_templates.py
 ```
 
-Both methods are idempotent (safe to run multiple times without creating duplicates).
+All methods are idempotent (safe to run multiple times without creating duplicates).
 
 ---
 

@@ -68,7 +68,15 @@ The `contest_templates.sql` file contains default global report templates for Co
 2. **Band-Hopper** - Make contacts on as many different amateur bands as possible
 3. **Elmer's Choice (Mode Diversity)** - Work across CW, Phone, and Digital modes
 
-### Installing Contest Templates
+### Automatic Initialization
+
+**Templates are automatically initialized during installation:**
+- Local installation: `install-local.sh` creates templates automatically
+- Docker installation: Templates are created on first container start
+
+### Manual Installation (if needed)
+
+If you need to manually reinstall templates:
 
 **Docker Deployment:**
 ```bash
@@ -85,4 +93,4 @@ sudo -u postgres psql logshackbaby < database/contest_templates.sql
 python3 init_templates.py
 ```
 
-The templates are designed to be included by default in new installations and can be re-imported at any time without creating duplicates (uses `ON CONFLICT DO NOTHING`).
+All methods use `ON CONFLICT DO NOTHING` to prevent duplicates.

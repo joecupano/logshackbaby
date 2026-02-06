@@ -225,6 +225,8 @@ python app.py
 
 Access at: `http://localhost:5000`
 
+**Note:** On first run, the database schema and default contest templates are automatically initialized.
+
 ### Using Docker for Development
 
 ```bash
