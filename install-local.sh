@@ -269,6 +269,21 @@ else
     exit 1
 fi
 
+# Initialize default contest templates
+print_info "Initializing default contest templates..."
+$PYTHON_CMD -c "
+from app import app, init_default_templates
+with app.app_context():
+    init_default_templates()
+    print('Contest templates initialized!')
+"
+
+if [ $? -eq 0 ]; then
+    print_success "Default contest templates created"
+else
+    print_warning "Template initialization had issues (may already exist)"
+fi
+
 cd ..
 echo ""
 
@@ -348,6 +363,10 @@ echo "   4. The first user becomes the system administrator (sysop)"
 echo "   5. Enable 2FA in Settings (recommended)"
 echo "   6. Create an API key in the API Keys tab"
 echo "   7. Upload your ADIF logs!"
+echo ""
+echo -e "${BLUE}ℹ️  Note:${NC}"
+echo "   Default contest templates have been initialized"
+echo "   (Grid Square Globetrotter, Band-Hopper, Elmer's Choice)"
 echo ""
 echo -e "${BLUE}📖 Documentation:${NC}"
 echo "   Configuration: backend/.env"

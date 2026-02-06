@@ -54,13 +54,15 @@ Access at: `http://localhost`
 
 ```bash
 cd /home/pi/source/LogShackBaby
-./install-local.sh   # First time setup
+./install-local.sh   # First time setup (includes template initialization)
 ./start-local.sh     # Start services
 ```
 
 Access at: `http://localhost:5000`
 
 **📖 For detailed installation instructions, see [Administration Guide](docs/ADMINISTRATION.md)**
+
+**Note**: The installation automatically creates default contest templates (Grid Square Globetrotter, Band-Hopper, Elmer's Choice) for ContestAdmin users.
 
 ### First Time Setup
 
