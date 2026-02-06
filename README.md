@@ -6,9 +6,9 @@ LogShackBaby provides a secure, containerized solution for uploading, storing, a
 
 ## 📚 Documentation
 
-- **[User Guide](docs/USERGUIDE.md)** - Complete guide for end users
-- **[Administration Guide](docs/ADMINISTRATION.md)** - Setup, deployment, and maintenance
-- **[Development Guide](docs/DEVELOPMENT.md)** - Technical documentation and API reference
+- **[User Guide](USERGUIDE.md)** - Complete guide for end users
+- **[Administration Guide](ADMINISTRATION.md)** - Setup, deployment, and maintenance
+- **[Development Guide](DEVELOPMENT.md)** - Technical documentation and API reference
 
 ## Features
 

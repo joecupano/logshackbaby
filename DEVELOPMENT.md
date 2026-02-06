@@ -140,24 +140,23 @@ LogShackBaby/
 │   └── ssl/
 │       └── README.md             # SSL setup instructions
 │
-├── docs/                         # Documentation
-│   ├── USERGUIDE.md              # End user guide
-│   ├── ADMINISTRATION.md         # Admin guide
-│   ├── DEVELOPMENT.md            # This file
-│   ├── PROJECT_FILES.txt         # Project structure
-│   └── (other docs)              # Legacy documentation
-│
-├── docker-compose.yml            # Container orchestration
-├── docker-compose.dev.yml        # Development configuration
 ├── .env.example                  # Environment template
 ├── .gitignore                    # Git ignore rules
-├── README.md                     # Main documentation
 ├── sample_log.adi                # Test ADIF file
 ├── test_adif_fields.py           # ADIF field tests
 │
+├── README.md                     # Main documentation
+│── USERGUIDE.md                  # End user guide
+│── ADMINISTRATION.md             # Admin guide
+│── DEVELOPMENT.md                # This file
+│── PROJECT_FILES.txt             # Project structure
+│
+├── docker-compose.yml            # Container orchestration
+├── docker-compose.dev.yml        # Development configuration
 ├── install-docker.sh             # Docker installation
 ├── start-docker.sh               # Start Docker containers
 ├── stop-docker.sh                # Stop Docker containers
+│
 ├── install-local.sh              # Local installation
 ├── start-local.sh                # Start local app
 └── stop-local.sh                 # Stop local app
