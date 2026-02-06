@@ -59,6 +59,10 @@ def require_auth(f):
         if not request.current_user:
             return jsonify({'error': 'User not found'}), 401
         
+        # Check if password change is required (allow only change-password endpoint)
+        if request.current_user.must_change_password and request.endpoint != 'change_password':
+            return jsonify({'error': 'Password change required', 'must_change_password': True}), 403
+        
         return f(*args, **kwargs)
     return decorated_function
 
@@ -164,7 +168,8 @@ def login():
         'session_token': session_token,
         'callsign': user.callsign,
         'role': user.role,
-        'mfa_required': user.mfa_enabled
+        'mfa_required': user.mfa_enabled,
+        'must_change_password': user.must_change_password
     }), 200
 
 
@@ -254,7 +259,10 @@ def mfa_verify():
     user.last_login = datetime.utcnow()
     db.session.commit()
     
-    return jsonify({'message': 'MFA verified successfully'}), 200
+    return jsonify({
+        'message': 'MFA verified successfully',
+        'must_change_password': user.must_change_password
+    }), 200
 
 
 @app.route('/api/mfa/disable', methods=['POST'])
@@ -274,6 +282,35 @@ def mfa_disable():
     db.session.commit()
     
     return jsonify({'message': 'MFA disabled successfully'}), 200
+
+
+@app.route('/api/change-password', methods=['POST'])
+@require_auth
+def change_password():
+    """Change user password (also handles forced password changes)"""
+    data = request.get_json()
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    
+    user = request.current_user
+    
+    if not current_password or not new_password:
+        return jsonify({'error': 'Both current and new passwords are required'}), 400
+    
+    # Verify current password
+    if not AuthManager.verify_password(current_password, user.password_hash):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+    
+    # Validate new password (minimum length)
+    if len(new_password) < 8:
+        return jsonify({'error': 'New password must be at least 8 characters'}), 400
+    
+    # Update password
+    user.password_hash = AuthManager.hash_password(new_password)
+    user.must_change_password = False
+    db.session.commit()
+    
+    return jsonify({'message': 'Password changed successfully'}), 200
 
 
 # Routes - API Keys
@@ -800,6 +837,37 @@ def admin_delete_user(user_id):
     
     return jsonify({
         'message': f'User {callsign} and {log_count} log entries deleted successfully'
+    }), 200
+
+
+@app.route('/api/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@require_auth
+@require_role('sysop')
+def admin_reset_password(user_id):
+    """Reset user password with temporary password (sysop only)"""
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    # Generate a temporary password
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits
+    temp_password = ''.join(secrets.choice(alphabet) for i in range(12))
+    
+    # Set the temporary password and require password change
+    user.password_hash = AuthManager.hash_password(temp_password)
+    user.must_change_password = True
+    
+    # Invalidate all existing sessions to force re-login
+    Session.query.filter_by(user_id=user_id).delete()
+    
+    db.session.commit()
+    
+    return jsonify({
+        'message': 'Password reset successfully',
+        'temporary_password': temp_password,
+        'callsign': user.callsign
     }), 200
 
 

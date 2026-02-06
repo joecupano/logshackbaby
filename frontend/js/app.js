@@ -37,6 +37,7 @@ function setupEventListeners() {
     document.getElementById('login-form').addEventListener('submit', handleLogin);
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('mfa-verify-form').addEventListener('submit', handleMFAVerify);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleChangePassword);
     document.getElementById('show-register').addEventListener('click', (e) => {
         e.preventDefault();
         showScreen('register');
@@ -277,6 +278,11 @@ async function handleLogin(e) {
                 // Show MFA verification
                 document.getElementById('login-form-container').classList.add('hidden');
                 document.getElementById('mfa-verify-container').classList.remove('hidden');
+            } else if (data.must_change_password) {
+                // Show forced password change
+                localStorage.setItem('sessionToken', sessionToken);
+                localStorage.setItem('userRole', currentUser.role);
+                showPasswordChangeScreen();
             } else {
                 // Login complete
                 localStorage.setItem('sessionToken', sessionToken);
@@ -306,9 +312,13 @@ async function handleMFAVerify(e) {
         const data = await response.json();
         
         if (response.ok) {
-            localStorage.setItem('sessionToken', sessionToken);
-            localStorage.setItem('userRole', currentUser.role);
-            loadDashboard();
+            if (data.must_change_password) {
+                showPasswordChangeScreen();
+            } else {
+                localStorage.setItem('sessionToken', sessionToken);
+                localStorage.setItem('userRole', currentUser.role);
+                loadDashboard();
+            }
         } else {
             showMessage(data.error || 'Invalid code', 'error');
         }
@@ -365,6 +375,51 @@ async function handleLogout() {
     currentUser = null;
     showScreen('login');
     showMessage('Logged out successfully', 'success');
+}
+
+// Password Change
+function showPasswordChangeScreen() {
+    showScreen('change-password');
+}
+
+async function handleChangePassword(e) {
+    e.preventDefault();
+    
+    const currentPassword = document.getElementById('change-current-password').value;
+    const newPassword = document.getElementById('change-new-password').value;
+    const confirmPassword = document.getElementById('change-confirm-password').value;
+    
+    if (newPassword !== confirmPassword) {
+        showMessage('New passwords do not match', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showMessage('New password must be at least 8 characters', 'error');
+        return;
+    }
+    
+    try {
+        const response = await apiCall('/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                current_password: currentPassword, 
+                new_password: newPassword 
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessage('Password changed successfully!', 'success');
+            document.getElementById('change-password-form').reset();
+            loadDashboard();
+        } else {
+            showMessage(data.error || 'Failed to change password', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to change password. Please try again.', 'error');
+    }
 }
 
 // Dashboard
@@ -1465,6 +1520,7 @@ function displaySysopUsers(users) {
                         <td>${formatDateTime(u.created_at)}</td>
                         <td>
                             <button class="btn btn-sm" onclick="editUser(${u.id})">Edit</button>
+                            <button class="btn btn-sm btn-warning" onclick="resetUserPassword(${u.id}, '${u.callsign}')">Reset Password</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id}, '${u.callsign}')">Delete</button>
                         </td>
                     </tr>
@@ -1562,6 +1618,67 @@ async function deleteUser(userId, callsign) {
     }
 }
 
+async function resetUserPassword(userId, callsign) {
+    if (!confirm(`Reset password for user ${callsign}? They will be forced to change it on next login.`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/admin/users/${userId}/reset-password`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Show temporary password in a modal or alert
+            const tempPassword = data.temporary_password;
+            showMessage('Password reset successfully!', 'success');
+            
+            // Display the temporary password in a copyable format
+            const modalHtml = `
+                <div class="modal-overlay" onclick="closePasswordModal()">
+                    <div class="modal-content" onclick="event.stopPropagation()">
+                        <h3>Temporary Password for ${callsign}</h3>
+                        <p>Please provide this temporary password to the user. They will be required to change it on next login.</p>
+                        <div class="temp-password-display">
+                            <code id="temp-password-text">${tempPassword}</code>
+                            <button class="btn btn-sm" onclick="copyTempPassword()">Copy</button>
+                        </div>
+                        <button class="btn" onclick="closePasswordModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to body
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'password-reset-modal';
+            modalDiv.innerHTML = modalHtml;
+            document.body.appendChild(modalDiv);
+        } else {
+            showMessage(data.error || 'Failed to reset password', 'error');
+        }
+    } catch (error) {
+        showMessage('Failed to reset password', 'error');
+    }
+}
+
+function closePasswordModal() {
+    const modal = document.getElementById('password-reset-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function copyTempPassword() {
+    const text = document.getElementById('temp-password-text').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        showMessage('Temporary password copied to clipboard', 'success');
+    }).catch(() => {
+        showMessage('Failed to copy password', 'error');
+    });
+}
+
 // Make functions globally accessible for onclick handlers
 window.loadLogs = loadLogs;
 window.deleteAPIKey = deleteAPIKey;
@@ -1569,3 +1686,6 @@ window.viewUserLogs = viewUserLogs;
 window.resetUserLogs = resetUserLogs;
 window.editUser = editUser;
 window.deleteUser = deleteUser;
+window.resetUserPassword = resetUserPassword;
+window.closePasswordModal = closePasswordModal;
+window.copyTempPassword = copyTempPassword;

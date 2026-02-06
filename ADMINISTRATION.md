@@ -571,14 +571,36 @@ The first registered user automatically becomes a **sysop** (system administrato
 
 ### Resetting User Passwords
 
-As sysop:
+**New Password Reset Feature:**
+
+As sysop, you can now reset any user's password with an automatically generated temporary password:
+
+1. Log in as sysop
+2. Go to "System Admin" tab
+3. Find the user
+4. Click "Reset Password"
+5. Confirm the action
+6. **Copy the temporary password** shown in the modal (shown only once!)
+7. Securely communicate the temporary password to the user
+
+When the user logs in with the temporary password:
+- They will be forced to change their password immediately
+- All their existing sessions will be invalidated
+- They cannot access any features until they set a new password
+
+For detailed information about the password reset feature, see [PASSWORD_RESET.md](PASSWORD_RESET.md).
+
+**Alternative Method (Manual):**
+
+You can also manually set a password through the edit interface:
+
 1. Go to "System Admin" tab
 2. Find user
 3. Click "Edit"
 4. Enter new password
 5. Click "Save"
 
-Inform the user of their new password.
+With this method, the user will NOT be forced to change the password.
 
 ### Deleting Users
 

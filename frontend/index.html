@@ -101,6 +101,40 @@
             </div>
         </div>
 
+        <!-- Change Password Screen -->
+        <div id="change-password-screen" class="screen">
+            <div class="container">
+                <div class="auth-box">
+                    <div class="header">
+                        <h1><span class="radio-icon">📻</span> LogShackBaby</h1>
+                        <p>Password Change Required</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Password Change Required</strong>
+                        <p>Your password has been reset by an administrator. Please choose a new password to continue.</p>
+                    </div>
+
+                    <form id="change-password-form">
+                        <div class="form-group">
+                            <label>Current (Temporary) Password *</label>
+                            <input type="password" id="change-current-password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password *</label>
+                            <input type="password" id="change-new-password" required minlength="8">
+                            <small>Minimum 8 characters</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password *</label>
+                            <input type="password" id="change-confirm-password" required minlength="8">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Screen -->
         <div id="dashboard-screen" class="screen">
             <div class="container">
